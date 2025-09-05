@@ -1,0 +1,23 @@
+{
+  "name": "com.cotacoes.data_scrapper",
+  "version": "1.0.0",
+  "description": "A backend server that scrap data from messages received by message broker",
+  "main": "main.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env --watch src/main.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Henrique Barros",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "puppeteer": "^24.17.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.7",
+    "@types/node": "^24.3.0"
+  }
+}
