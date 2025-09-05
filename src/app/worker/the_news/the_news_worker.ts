@@ -19,6 +19,8 @@ export class TheNewsWorker {
 
 	async execute(fromDate: string) {
 		try {
+			this.logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
+
 			Puppeteer.use(StealthPlugin());
 
 			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
@@ -96,7 +98,7 @@ export class TheNewsWorker {
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.logger.error('[PtaxWorker] Ptax data scrap failed', error.message);
+				this.logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error);
 			}
 
 			throw error;

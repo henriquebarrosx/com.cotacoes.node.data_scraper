@@ -36,16 +36,11 @@ export class TheNewsQueueConsumer {
 		const { channel, message } = options;
 
 		this.#asyncQueue.add(correlationId, async () => {
-			try {
-				const { fromDate } = JSON.parse(data) as TheNewsInput;
-				const news = await this.#theNewsWorker.execute(fromDate);
+			const fromDate = this.getTargetDate(data);
 
-				this.#messageBroker.confirm(
-					{
-						message,
-						from: channel,
-					}
-				);
+			try {
+				const news = await this.#theNewsWorker.execute(fromDate);
+				this.#messageBroker.confirm({ message, from: channel });
 
 				await this.#messageBroker.publish(
 					{
@@ -65,6 +60,11 @@ export class TheNewsQueueConsumer {
 				);
 			}
 		})
+	}
+
+	private getTargetDate(data: string): string {
+		const { fromDate } = JSON.parse(data) as TheNewsInput;
+		return fromDate
 	}
 
 }

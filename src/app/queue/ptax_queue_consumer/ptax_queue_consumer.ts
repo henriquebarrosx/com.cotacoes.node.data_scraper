@@ -35,10 +35,10 @@ export class PtaxQueueConsumer {
 		const { correlationId, data, options: { channel, message } } = output;
 
 		this.#asyncQueue.add(correlationId, async () => {
-			try {
-				const { fromDate } = JSON.parse(data) as PtaxInput;
-				const ptax = await this.#ptaxWorker.execute(fromDate);
+			const fromDate = this.getTargetDate(data);
 
+			try {
+				const ptax = await this.#ptaxWorker.execute(fromDate);
 				this.#messageBroker.confirm({ message, from: channel });
 
 				await this.#messageBroker.publish(
@@ -61,4 +61,8 @@ export class PtaxQueueConsumer {
 		})
 	}
 
+	private getTargetDate(data: string): string {
+		const { fromDate } = JSON.parse(data) as PtaxInput;
+		return fromDate
+	}
 }
