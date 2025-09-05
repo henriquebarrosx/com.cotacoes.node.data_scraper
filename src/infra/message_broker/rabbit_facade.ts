@@ -112,7 +112,7 @@ export class RabbitMQFacade implements MessageBroker {
 				try {
 					await callback({
 						correlationId: message.properties.correlationId!,
-						data: JSON.stringify(message.content),
+						data: message.content.toString(),
 						options: {
 							channel: channel,
 							message: message,
