@@ -7,13 +7,13 @@
 
 ```bash
 # On Linux or Mac
-export RABBITMQ_URL="amqp://admin:guest@localhost"
+export RABBITMQ_URI="amqp://admin:guest@localhost"
 export CME_RESOURCE_URL="..."
 export PTAX_RESOURCE_URL="..."
 export THE_NEWS_RESOURCE_URL="..."
 
 # On Windows
-$env:RABBITMQ_URL = "amqp://admin:guest@localhost"
+$env:RABBITMQ_URI = "amqp://admin:guest@localhost"
 $env:CME_RESOURCE_URL = "..."
 $env:PTAX_RESOURCE_URL = "..."
 $env:THE_NEWS_RESOURCE_URL = "..."
