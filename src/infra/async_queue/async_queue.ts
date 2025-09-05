@@ -35,13 +35,13 @@ export class AsyncQueue {
 
 				this.logger.info(`[AsyncQueue] Task executed successfully: ${id}`);
 				this.logger.info(`[AsyncQueue] Pending enqueued tasks: ${this.#tasks.size}`);
-
-				this.#inProcessing = false;
-				this.#processNext();
 			})
 			.catch(() => {
 				this.logger.info(`[AsyncQueue] Task execution fail: ${id}`);
+			})
+			.finally(() => {
 				this.#inProcessing = false;
+				this.#processNext();
 			});
 	}
 
