@@ -1,0 +1,40 @@
+name: Deploy to VPS on Main Branch Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+          script: |
+            echo "Conectado à VPS. Iniciando o processo de deploy..."
+            echo "1. Parando os contêineres Docker..."
+            cd ~/server/cotacoes/com.cotacoes.data_scraper
+            docker compose down
+
+            echo "2. Removendo a imagem Docker antiga..."
+            docker image rm comcotacoesdata_scrapper-app || true
+
+            echo "3. Puxando as últimas alterações da branch 'main'..."
+            git clean -fd
+            git restore .
+            git pull origin main
+
+            echo "4. Iniciando os novos contêineres Docker..."
+            docker compose up -d
+
+            echo "Deploy concluído com sucesso!"
