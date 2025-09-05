@@ -27,7 +27,7 @@ jobs:
             docker compose down
 
             echo "2. Removendo a imagem Docker antiga..."
-            docker image rm comcotacoesdata_scrapper-app || true
+            docker image rm comcotacoesdata_scraper-app || true
 
             echo "3. Puxando as últimas alterações da branch 'main'..."
             git clean -fd
