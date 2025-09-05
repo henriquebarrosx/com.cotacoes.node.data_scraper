@@ -23,7 +23,7 @@ export class CmeQueueConsumer {
 		await this.#messageBroker.listen(
 			{
 				queue: queues.CME_DATA_SCRAPER,
-				handler: this.processIncomingMessage,
+				handler: (...args) => this.processIncomingMessage(...args),
 			}
 		);
 	}
