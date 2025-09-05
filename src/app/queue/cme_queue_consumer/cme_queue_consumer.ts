@@ -24,26 +24,36 @@ export class CmeQueueConsumer {
 			{
 				queue: queues.CME_DATA_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
-				options: {
-					prefetch: 1,
-				}
+				options: { prefetch: 1 }
 			}
 		);
 	}
 
-	private async processIncomingMessage({ correlationId, options }: ConsumerOutput) {
-		const { channel, message } = options;
+	private async processIncomingMessage(output: ConsumerOutput) {
+		const { correlationId, options: { channel, message } } = output;
 
 		this.#asyncQueue.add(correlationId, async () => {
-			const cme = await this.#cmeWorker.execute();
-			this.#messageBroker.confirm({ message, from: channel });
+			try {
+				const cme = await this.#cmeWorker.execute();
+				this.#messageBroker.confirm({ message, from: channel });
 
-			await this.#messageBroker.publish(
-				{
-					message: cme,
-					to: queues.CME_DATA_STORE,
-				}
-			);
+				await this.#messageBroker.publish(
+					{
+						message: cme,
+						to: queues.CME_DATA_STORE,
+					}
+				);
+			}
+
+			catch (error) {
+				this.#messageBroker.reject(
+					{
+						queue: queues.CME_DATA_SCRAPER,
+						channel: channel,
+						message: message,
+					}
+				);
+			}
 		})
 	}
 

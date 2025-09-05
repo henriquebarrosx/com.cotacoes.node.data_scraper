@@ -27,9 +27,7 @@ export class TheNewsQueueConsumer {
 			{
 				queue: queues.THE_NEWS_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
-				options: {
-					prefetch: 1,
-				}
+				options: { prefetch: 1 }
 			}
 		);
 	}
@@ -38,17 +36,34 @@ export class TheNewsQueueConsumer {
 		const { channel, message } = options;
 
 		this.#asyncQueue.add(correlationId, async () => {
-			const { fromDate } = JSON.parse(data) as TheNewsInput;
-			const news = await this.#theNewsWorker.execute(fromDate);
+			try {
+				const { fromDate } = JSON.parse(data) as TheNewsInput;
+				const news = await this.#theNewsWorker.execute(fromDate);
 
-			this.#messageBroker.confirm({ message, from: channel });
+				this.#messageBroker.confirm(
+					{
+						message,
+						from: channel,
+					}
+				);
 
-			await this.#messageBroker.publish(
-				{
-					message: news,
-					to: queues.THE_NEWS_ARTICLE_STORE,
-				}
-			);
+				await this.#messageBroker.publish(
+					{
+						message: news,
+						to: queues.THE_NEWS_ARTICLE_STORE,
+					}
+				);
+			}
+
+			catch (error) {
+				this.#messageBroker.reject(
+					{
+						queue: queues.THE_NEWS_SCRAPER,
+						channel: channel,
+						message: message,
+					}
+				);
+			}
 		})
 	}
 

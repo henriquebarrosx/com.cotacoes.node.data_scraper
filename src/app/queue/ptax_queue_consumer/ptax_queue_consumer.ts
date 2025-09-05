@@ -26,28 +26,38 @@ export class PtaxQueueConsumer {
 			{
 				queue: queues.PTAX_DATA_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
-				options: {
-					prefetch: 1,
-				}
+				options: { prefetch: 1 }
 			}
 		);
 	}
 
-	private async processIncomingMessage({ correlationId, data, options }: ConsumerOutput) {
-		const { channel, message } = options;
+	private async processIncomingMessage(output: ConsumerOutput) {
+		const { correlationId, data, options: { channel, message } } = output;
 
 		this.#asyncQueue.add(correlationId, async () => {
-			const { fromDate } = JSON.parse(data) as PtaxInput;
-			const ptax = await this.#ptaxWorker.execute(fromDate);
+			try {
+				const { fromDate } = JSON.parse(data) as PtaxInput;
+				const ptax = await this.#ptaxWorker.execute(fromDate);
 
-			this.#messageBroker.confirm({ message, from: channel });
+				this.#messageBroker.confirm({ message, from: channel });
 
-			await this.#messageBroker.publish(
-				{
-					message: ptax,
-					to: queues.PTAX_DATA_STORE,
-				}
-			);
+				await this.#messageBroker.publish(
+					{
+						message: ptax,
+						to: queues.PTAX_DATA_STORE,
+					}
+				);
+			}
+
+			catch (error) {
+				this.#messageBroker.reject(
+					{
+						queue: queues.PTAX_DATA_STORE,
+						channel: channel,
+						message: message,
+					}
+				);
+			}
 		})
 	}
 

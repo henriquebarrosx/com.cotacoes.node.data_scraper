@@ -1,13 +1,15 @@
 import * as Amqp from 'amqplib';
 
 import type { Logger } from '../logger/logger.ts';
-import type { ConsumeInput, DeliveryInput, MessageBroker, PublishInput, RetryOptions } from "./message_broker.ts";
+import type { ConsumeInput, DeliveryInput, MessageBroker, PublishInput, RejectInput, RetryOptions } from "./message_broker.ts";
 
 /**
  * Repositório: 
  * https://www.npmjs.com/package/amqplib
  */
 export class RabbitMQFacade implements MessageBroker {
+
+	private readonly MAX_ALLOWED_RETRIES = 3;
 
 	private conn: Amqp.ChannelModel | null = null;
 
@@ -72,14 +74,8 @@ export class RabbitMQFacade implements MessageBroker {
 			},
 		);
 
-		this.logger.info(
-			'[RabbitMQFacade] Publishing new message',
-			{
-				event: 'PUBLISH',
-				queue: queue,
-				id: correlationId,
-			}
-		);
+		this.logger.info('[RabbitMQFacade] Publishing new message');
+		this.logger.json({ id: correlationId, event: 'PUBLISH', queue: queue });
 	}
 
 	async listen({ queue, handler, options = {} }: ConsumeInput): Promise<void> {
@@ -97,16 +93,18 @@ export class RabbitMQFacade implements MessageBroker {
 				if (!message) return;
 
 				const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
-				const MAX_ALLOWED_RETRIES = 3;
 
-				this.logger.info(
-					'[RabbitMQFacade] Receiving new message',
+				this.logger.info('[RabbitMQFacade] Receiving new message');
+
+				this.logger.json(
 					{
 						id: message.properties.correlationId,
 						event: 'RECEIVED',
-						retries: `${retryCount}/${MAX_ALLOWED_RETRIES}`,
-						failed: retryCount !== 0,
 						queue: queue,
+						args: {
+							retries: `${retryCount}/${this.MAX_ALLOWED_RETRIES}`,
+							failed: retryCount !== 0,
+						}
 					}
 				);
 
@@ -122,21 +120,13 @@ export class RabbitMQFacade implements MessageBroker {
 				}
 
 				catch {
-					if (retryCount >= MAX_ALLOWED_RETRIES) {
-						this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
-						this.confirm({ message, from: channel });
-						return;
-					}
-
-					await this.asyncRetry(
-						channel,
+					this.reject(
 						{
-							correlationId: message.properties.correlationId!,
 							queue: queue,
-							retryCount: retryCount,
 							message: message,
+							channel: channel,
 						}
-					)
+					);
 				}
 			},
 			{
@@ -168,6 +158,26 @@ export class RabbitMQFacade implements MessageBroker {
 
 	confirm({ message, from }: DeliveryInput): void {
 		from.ack(message);
+	}
+
+	async reject({ channel, message, queue }: RejectInput): Promise<void> {
+		const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
+
+		if (retryCount >= this.MAX_ALLOWED_RETRIES) {
+			this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
+			this.confirm({ message, from: channel });
+			return;
+		}
+
+		await this.asyncRetry(
+			channel,
+			{
+				correlationId: message.properties.correlationId!,
+				queue: queue,
+				retryCount: retryCount,
+				message: message,
+			}
+		)
 	}
 
 }

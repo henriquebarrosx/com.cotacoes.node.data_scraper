@@ -3,6 +3,15 @@ export class Logger {
 		console.log(`INFO (${this.getFormattedDateTime()}): ${message}`, ...args);
 	}
 
+	json(args: Record<string, unknown> = {}): void {
+		console.log(
+			{
+				...args,
+				timestamp: this.getFormattedDateTime(),
+			}
+		);
+	}
+
 	error(message: string, ...args: unknown[]): void {
 		console.error(`ERROR (${this.getFormattedDateTime()}): ${message}`, ...args);
 	}

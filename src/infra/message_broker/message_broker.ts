@@ -6,6 +6,7 @@ export interface MessageBroker {
 	publish(params: PublishInput): Promise<void>;
 	listen(params: ConsumeInput): Promise<void>;
 	confirm(params: DeliveryInput): void;
+	reject(params: RejectInput): Promise<void>;
 }
 
 export type PublishInput = {
@@ -41,6 +42,12 @@ export type ConsumerOutputOptions = {
 export type DeliveryInput = {
 	message: Amqp.Message;
 	from: Amqp.Channel;
+}
+
+export type RejectInput = {
+	channel: Amqp.Channel;
+	message: Amqp.Message;
+	queue: MessageBrokerQueues;
 }
 
 export type RetryOptions = {
