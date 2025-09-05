@@ -1,4 +1,4 @@
-import { CmeWorker } from "../../cme/cme_worker.ts";
+import { CmeWorker } from "../../worker/cme/cme_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
 import { AsyncQueue } from "../../../infra/async_queue/async_queue.ts";
 import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";

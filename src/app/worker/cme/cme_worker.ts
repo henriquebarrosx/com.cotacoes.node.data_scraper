@@ -1,7 +1,7 @@
 import Puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-import { Logger } from "../../infra/logger/logger.ts";
+import { Logger } from "../../../infra/logger/logger.ts";
 import type { CmeRawDTO } from './cme_raw_dto.ts';
 
 export class CmeWorker {
