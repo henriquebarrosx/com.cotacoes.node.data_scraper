@@ -25,7 +25,7 @@ export class CmeQueueConsumer {
 				queue: queues.CME_DATA_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
 				options: {
-					limit: 1,
+					prefetch: 1,
 				}
 			}
 		);

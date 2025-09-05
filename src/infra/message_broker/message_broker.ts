@@ -24,7 +24,7 @@ export type ConsumeInput = {
 
 export type ConsumerInputOptions = {
 	/** number of concurrency incoming messages */
-	limit: number;
+	prefetch: number;
 }
 
 export type ConsumerOutput = {

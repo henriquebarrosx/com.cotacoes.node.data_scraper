@@ -89,10 +89,7 @@ export class RabbitMQFacade implements MessageBroker {
 
 		const channel = await this.conn.createChannel();
 		await channel.assertQueue(queue, { durable: true });
-
-		if ('limit' in options) {
-			await channel.prefetch(options.limit ?? 0);
-		}
+		await channel.prefetch(options?.prefetch ?? 0);
 
 		channel.consume(
 			queue,
