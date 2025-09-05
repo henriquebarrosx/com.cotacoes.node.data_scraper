@@ -1,6 +1,7 @@
 import { logger } from "../logger/index.ts";
 import { messageBroker } from "../message_broker/index.ts";
 import { cmeQueueConsumer } from "../../app/queue/cme_queue_consumer/index.ts";
+import { ptaxQueueConsumer } from "../../app/queue/ptax_queue_consumer/index.ts";
 
 export class ApplicationBootstrap {
 
@@ -12,6 +13,7 @@ export class ApplicationBootstrap {
 
 		logger.info("[ApplicationBootstrap] — initializing message broker queues");
 		await cmeQueueConsumer.register();
+		await ptaxQueueConsumer.register();
 	}
 
 }
