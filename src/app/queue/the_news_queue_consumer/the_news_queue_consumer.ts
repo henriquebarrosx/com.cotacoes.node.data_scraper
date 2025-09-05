@@ -27,6 +27,9 @@ export class TheNewsQueueConsumer {
 			{
 				queue: queues.THE_NEWS_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
+				options: {
+					limit: 1,
+				}
 			}
 		);
 	}

@@ -26,6 +26,9 @@ export class PtaxQueueConsumer {
 			{
 				queue: queues.PTAX_DATA_SCRAPER,
 				handler: (...args) => this.processIncomingMessage(...args),
+				options: {
+					limit: 1,
+				}
 			}
 		);
 	}

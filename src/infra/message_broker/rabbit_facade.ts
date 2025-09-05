@@ -1,7 +1,7 @@
 import * as Amqp from 'amqplib';
 
-import type { ConsumeInput, MessageBroker, PublishInput, RetryOptions } from "./message_broker.ts";
 import type { Logger } from '../logger/logger.ts';
+import type { ConsumeInput, DeliveryInput, MessageBroker, PublishInput, RetryOptions } from "./message_broker.ts";
 
 /**
  * Repositório: 
@@ -82,13 +82,17 @@ export class RabbitMQFacade implements MessageBroker {
 		);
 	}
 
-	async listen({ queue, handler: callback }: ConsumeInput): Promise<void> {
+	async listen({ queue, handler, options = {} }: ConsumeInput): Promise<void> {
 		if (!this.conn) {
 			throw new Error(`Cannot consume message for queue ${queue}: must establish a connection first`)
 		}
 
 		const channel = await this.conn.createChannel();
 		await channel.assertQueue(queue, { durable: true });
+
+		if ('limit' in options) {
+			await channel.prefetch(options.limit ?? 0);
+		}
 
 		channel.consume(
 			queue,
@@ -110,7 +114,7 @@ export class RabbitMQFacade implements MessageBroker {
 				);
 
 				try {
-					await callback({
+					await handler({
 						correlationId: message.properties.correlationId!,
 						data: message.content.toString(),
 						options: {
@@ -123,7 +127,7 @@ export class RabbitMQFacade implements MessageBroker {
 				catch {
 					if (retryCount >= MAX_ALLOWED_RETRIES) {
 						this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
-						channel.ack(message);
+						this.confirm({ message, from: channel });
 						return;
 					}
 
@@ -161,11 +165,11 @@ export class RabbitMQFacade implements MessageBroker {
 			},
 		);
 
-		channel.ack(message);
+		this.confirm({ message, from: channel });
 	}
 
 
-	confirm({ message, from }): void {
+	confirm({ message, from }: DeliveryInput): void {
 		from.ack(message);
 	}
 

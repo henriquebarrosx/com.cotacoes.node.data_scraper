@@ -19,15 +19,21 @@ export type PublishInput = {
 export type ConsumeInput = {
 	queue: MessageBrokerQueues;
 	handler: (output: ConsumerOutput) => Promise<void>;
+	options?: Partial<ConsumerInputOptions>
+}
+
+export type ConsumerInputOptions = {
+	/** number of concurrency incoming messages */
+	limit: number;
 }
 
 export type ConsumerOutput = {
 	correlationId: string;
 	data: string;
-	options: ConsumerOptions;
+	options: ConsumerOutputOptions;
 }
 
-export type ConsumerOptions = {
+export type ConsumerOutputOptions = {
 	message: Amqp.Message;
 	channel: Amqp.Channel
 }
