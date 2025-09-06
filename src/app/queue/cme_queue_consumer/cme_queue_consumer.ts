@@ -19,17 +19,14 @@ export class CmeQueueConsumer {
 		await this.#messageBroker.listen(
 			{
 				queue: queues.CME_DATA_SCRAPER,
-				handler: (...args) => this.processIncomingMessage(...args),
+				handler: () => this.processIncomingMessage(),
 				options: { prefetch: 1 }
 			}
 		);
 	}
 
-	private async processIncomingMessage(output: ConsumerOutput) {
-		const { options: { channel, message } } = output;
-
+	private async processIncomingMessage() {
 		const cme = await this.#cmeWorker.execute();
-		this.#messageBroker.confirm({ message, from: channel });
 		await this.#messageBroker.publish({ message: cme, to: queues.CME_DATA_STORE });
 	}
 

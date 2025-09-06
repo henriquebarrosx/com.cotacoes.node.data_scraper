@@ -28,12 +28,9 @@ export class TheNewsQueueConsumer {
 		);
 	}
 
-	private async processIncomingMessage({ data, options }: ConsumerOutput) {
-		const { channel, message } = options;
-
+	private async processIncomingMessage({ data }: ConsumerOutput) {
 		const fromDate = this.getTargetDate(data);
 		const news = await this.#theNewsWorker.execute(fromDate);
-		this.#messageBroker.confirm({ message, from: channel });
 		await this.#messageBroker.publish({ message: news, to: queues.THE_NEWS_ARTICLE_STORE });
 	}
 

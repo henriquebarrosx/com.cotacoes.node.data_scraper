@@ -27,12 +27,9 @@ export class PtaxQueueConsumer {
 		);
 	}
 
-	private async processIncomingMessage(output: ConsumerOutput) {
-		const { data, options: { channel, message } } = output;
-
+	private async processIncomingMessage({ data }: ConsumerOutput) {
 		const fromDate = this.getTargetDate(data);
 		const ptax = await this.#ptaxWorker.execute(fromDate);
-		this.#messageBroker.confirm({ message: message, from: channel });
 		await this.#messageBroker.publish({ message: ptax, to: queues.PTAX_DATA_STORE });
 	}
 

@@ -1,7 +1,7 @@
 import * as Amqp from 'amqplib';
 
 import type { Logger } from '../logger/logger.ts';
-import type { ConsumeInput, DeliveryInput, MessageBroker, PublishInput, RejectInput, RetryOptions } from "./message_broker.ts";
+import type { ConsumeInput, MessageBroker, PublishInput, RetryOptions } from "./message_broker.ts";
 
 /**
  * Repositório: 
@@ -92,9 +92,8 @@ export class RabbitMQFacade implements MessageBroker {
 			async (message: Amqp.ConsumeMessage | null) => {
 				if (!message) return;
 
-				const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
-
 				this.logger.info('[RabbitMQFacade] Receiving new message');
+				const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
 
 				this.logger.json(
 					{
@@ -112,21 +111,29 @@ export class RabbitMQFacade implements MessageBroker {
 					await handler({
 						correlationId: message.properties.correlationId!,
 						data: message.content.toString(),
-						options: {
-							channel: channel,
-							message: message,
-						}
 					});
+
+					channel.ack(message);
 				}
 
 				catch {
-					this.reject(
+					const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
+
+					if (retryCount >= this.MAX_ALLOWED_RETRIES) {
+						this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
+						channel.ack(message);
+						return;
+					}
+
+					await this.asyncRetry(
+						channel,
 						{
+							correlationId: message.properties.correlationId!,
 							queue: queue,
+							retryCount: retryCount,
 							message: message,
-							channel: channel,
 						}
-					);
+					)
 				}
 			},
 			{
@@ -152,32 +159,7 @@ export class RabbitMQFacade implements MessageBroker {
 			},
 		);
 
-		this.confirm({ message, from: channel });
-	}
-
-
-	confirm({ message, from }: DeliveryInput): void {
-		from.ack(message);
-	}
-
-	async reject({ channel, message, queue }: RejectInput): Promise<void> {
-		const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
-
-		if (retryCount >= this.MAX_ALLOWED_RETRIES) {
-			this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
-			this.confirm({ message, from: channel });
-			return;
-		}
-
-		await this.asyncRetry(
-			channel,
-			{
-				correlationId: message.properties.correlationId!,
-				queue: queue,
-				retryCount: retryCount,
-				message: message,
-			}
-		)
+		channel.ack(message);
 	}
 
 }
