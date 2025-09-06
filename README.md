@@ -8,15 +8,15 @@
 ```bash
 # On Linux or Mac
 export RABBITMQ_URI="amqp://admin:guest@localhost"
-export CME_RESOURCE_URL="..."
-export PTAX_RESOURCE_URL="..."
-export THE_NEWS_RESOURCE_URL="..."
+export CME_BASE_URL="..."
+export PTAX_BASE_URL="..."
+export THE_NEWS_BASE_URL="..."
 
 # On Windows
 $env:RABBITMQ_URI = "amqp://admin:guest@localhost"
-$env:CME_RESOURCE_URL = "..."
-$env:PTAX_RESOURCE_URL = "..."
-$env:THE_NEWS_RESOURCE_URL = "..."
+$env:CME_BASE_URL = "..."
+$env:PTAX_BASE_URL = "..."
+$env:THE_NEWS_BASE_URL = "..."
 ```
 
 2. Create a shared network to establish connection with RabbitMQ at multiple

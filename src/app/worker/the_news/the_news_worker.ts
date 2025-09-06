@@ -12,17 +12,17 @@ export type TheNewsInput = {
 
 export class TheNewsWorker {
 
-	private readonly logger: Logger;
+	readonly #logger: Logger;
 
 	constructor(logger: Logger) {
-		this.logger = logger;
+		this.#logger = logger;
 	}
 
 	async execute(fromDate: string) {
 		let browser: Browser | null = null;
 
 		try {
-			this.logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
+			this.#logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
 
 			Puppeteer.use(StealthPlugin());
 
@@ -41,11 +41,11 @@ export class TheNewsWorker {
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error.message);
+				this.#logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error.message);
 			}
 
 			if (browser) {
-				this.logger.info('[TheNewsWorker] Closing browser after failure');
+				this.#logger.info('[TheNewsWorker] Closing browser after failure');
 				await browser.close();
 			}
 

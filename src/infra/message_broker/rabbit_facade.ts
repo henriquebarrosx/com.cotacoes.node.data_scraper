@@ -9,45 +9,45 @@ import type { ConsumeInput, MessageBroker, PublishInput, RetryOptions } from "./
  */
 export class RabbitMQFacade implements MessageBroker {
 
-	private readonly MAX_ALLOWED_RETRIES = 3;
+	readonly #logger: Logger;
 
-	private conn: Amqp.ChannelModel | null = null;
+	readonly MAX_ALLOWED_RETRIES = 3;
 
-	private readonly logger: Logger;
+	#conn: Amqp.ChannelModel | null = null;
 
 	constructor(logger: Logger) {
-		this.logger = logger;
+		this.#logger = logger;
 	}
 
 	async connect(): Promise<void> {
 		await this.keepAlive(async () => {
 			try {
-				this.logger.info('[RabbitMQFacade] Establishing new connection');
+				this.#logger.info('[RabbitMQFacade] Establishing new connection');
 
 				const uri = process.env['RABBITMQ_URI'];
 				if (!uri) throw new Error('Cannot establish message broker connection: uri not defined');
 
-				this.conn = await Amqp.connect(uri);
-				this.logger.info('[RabbitMQFacade] Connection established');
+				this.#conn = await Amqp.connect(uri);
+				this.#logger.info('[RabbitMQFacade] Connection established');
 			}
 
 			catch (error) {
-				this.logger.error("[RabbitMQFacade] Failed to establish a connection", error);
+				this.#logger.error("[RabbitMQFacade] Failed to establish a connection", error);
 				await this.reconnect();
 			}
 		})
 	}
 
 	private async keepAlive(handler: () => Promise<void>) {
-		while (!this.conn) {
+		while (!this.#conn) {
 			await handler();
 		}
 	}
 
 	private async reconnect() {
-		this.logger.info("[RabbitMQFacade] Trying establish new connection at 5s");
+		this.#logger.info("[RabbitMQFacade] Trying establish new connection at 5s");
 		await this.sleep(5_000);
-		this.conn = null;
+		this.#conn = null;
 	}
 
 	private async sleep(delay: number = 5000) {
@@ -55,11 +55,11 @@ export class RabbitMQFacade implements MessageBroker {
 	}
 
 	async publish({ to: queue, message }: PublishInput): Promise<void> {
-		if (!this.conn) {
+		if (!this.#conn) {
 			throw new Error('Cannot publish message: must establish a connection first')
 		}
 
-		const channel = await this.conn.createChannel();
+		const channel = await this.#conn.createChannel();
 		await channel.assertQueue(queue, { durable: true });
 
 		const correlationId = crypto.randomUUID();
@@ -74,16 +74,16 @@ export class RabbitMQFacade implements MessageBroker {
 			},
 		);
 
-		this.logger.info('[RabbitMQFacade] Publishing new message');
-		this.logger.json({ id: correlationId, event: 'PUBLISH', queue: queue });
+		this.#logger.info('[RabbitMQFacade] Publishing new message');
+		this.#logger.json({ id: correlationId, event: 'PUBLISH', queue: queue });
 	}
 
 	async listen({ queue, handler, options = {} }: ConsumeInput): Promise<void> {
-		if (!this.conn) {
+		if (!this.#conn) {
 			throw new Error(`Cannot consume message for queue ${queue}: must establish a connection first`)
 		}
 
-		const channel = await this.conn.createChannel();
+		const channel = await this.#conn.createChannel();
 		await channel.assertQueue(queue, { durable: true });
 		await channel.prefetch(options?.prefetch ?? 0);
 
@@ -92,10 +92,10 @@ export class RabbitMQFacade implements MessageBroker {
 			async (message: Amqp.ConsumeMessage | null) => {
 				if (!message) return;
 
-				this.logger.info('[RabbitMQFacade] Receiving new message');
+				this.#logger.info('[RabbitMQFacade] Receiving new message');
 				const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
 
-				this.logger.json(
+				this.#logger.json(
 					{
 						id: message.properties.correlationId,
 						event: 'RECEIVED',
@@ -120,7 +120,7 @@ export class RabbitMQFacade implements MessageBroker {
 					const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
 
 					if (retryCount >= this.MAX_ALLOWED_RETRIES) {
-						this.logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
+						this.#logger.error(`[RabbitMQFacade] Max retries reached for ${message.properties.correlationId} at ${queue} queue, discarding...`);
 						channel.ack(message);
 						return;
 					}
@@ -141,7 +141,7 @@ export class RabbitMQFacade implements MessageBroker {
 			}
 		)
 
-		this.logger.info(`[RabbitMQFacade] New consumer registered for queue ${queue}`);
+		this.#logger.info(`[RabbitMQFacade] New consumer registered for queue ${queue}`);
 	}
 
 	private async asyncRetry(channel: Amqp.Channel, options: RetryOptions) {

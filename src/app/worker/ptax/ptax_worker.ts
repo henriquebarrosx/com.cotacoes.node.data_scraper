@@ -13,17 +13,17 @@ export type PtaxInput = {
 
 export class PtaxWorker {
 
-	private readonly logger: Logger;
+	readonly #logger: Logger;
 
 	constructor(logger: Logger) {
-		this.logger = logger;
+		this.#logger = logger;
 	}
 
 	async execute(fromDate: string) {
 		let browser: Browser | null = null;
 
 		try {
-			this.logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
+			this.#logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
 
 			Puppeteer.use(StealthPlugin());
 
@@ -42,11 +42,11 @@ export class PtaxWorker {
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.logger.error(`[PtaxWorker] Ptax data scrap failed at date: ${fromDate}`, error.message);
+				this.#logger.error(`[PtaxWorker] Ptax data scrap failed at date: ${fromDate}`, error.message);
 			}
 
 			if (browser) {
-				this.logger.info('[PtaxWorker] Closing browser after failure');
+				this.#logger.info('[PtaxWorker] Closing browser after failure');
 				await browser.close();
 			}
 

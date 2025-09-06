@@ -8,10 +8,10 @@ import type { CmeRawDTO } from './cme_raw_dto.ts';
 
 export class CmeWorker {
 
-	private readonly logger: Logger;
+	readonly #logger: Logger;
 
 	constructor(logger: Logger) {
-		this.logger = logger;
+		this.#logger = logger;
 	}
 
 	async execute() {
@@ -20,7 +20,7 @@ export class CmeWorker {
 		try {
 			Puppeteer.use(StealthPlugin());
 
-			const baseURL = process.env["CME_RESOURCE_URL"];
+			const baseURL = process.env["CME_BASE_URL"];
 			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
 
 			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
@@ -38,11 +38,11 @@ export class CmeWorker {
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.logger.error('[CmeWorker] Cme data scrap failed', error.message);
+				this.#logger.error('[CmeWorker] Cme data scrap failed', error.message);
 			}
 
 			if (browser) {
-				this.logger.info('[CmeWorker] Closing browser after failure');
+				this.#logger.info('[CmeWorker] Closing browser after failure');
 				await browser.close();
 			}
 

@@ -1,13 +1,13 @@
 export class PtaxUrl {
-	/** @param isoDate Ex.: 2025-08-19T20:42:44.651Z */
-	readonly #isoDate: string;
+	readonly #date: string;
 
-	constructor(isoDate: string) {
-		this.#isoDate = isoDate;
+	/** @param date Ex.: 2025-08-19T20:42:44.651Z or 2025-08-19 */
+	constructor(date: string) {
+		this.#date = date;
 	}
 
 	get value(): string {
-		const baseURL = process.env["PTAX_RESOURCE_URL"];
+		const baseURL = process.env["PTAX_BASE_URL"];
 		if (!baseURL) throw new Error('Cannot build ptax url: missing ptax resource url');
 
 		const TRADED_EXCHANGE_RATES_REPORT_OPTION = "3";
@@ -23,7 +23,7 @@ export class PtaxUrl {
 	}
 
 	#getDateFormat() {
-		const dateFormat = this.#isoDate
+		const dateFormat = this.#date
 			.split('T')
 			.slice(0, 1)
 			.join('')

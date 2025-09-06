@@ -1,11 +1,9 @@
 export class TheNewsUrl {
-	/**
-	 * @param isoDate Ex.: 2025-08-19T20:42:44.651Z
-	 */
-	readonly #isoDate: string;
+	readonly #date: string;
 
-	constructor(isoDate: string) {
-		this.#isoDate = isoDate;
+	/** @param date Ex.: 2025-08-19T20:42:44.651Z or 2025-08-19 */
+	constructor(date: string) {
+		this.#date = date;
 	}
 
 	get value(): string {
@@ -15,13 +13,13 @@ export class TheNewsUrl {
 	}
 
 	get baseURL() {
-		const baseURL = process.env["THE_NEWS_RESOURCE_URL"];
+		const baseURL = process.env["THE_NEWS_BASE_URL"];
 		if (!baseURL) throw new Error('Cannot build the news url: missing the news resource url');
 		return baseURL;
 	}
 
 	#getDateFormat() {
-		const dateFormat = this.#isoDate
+		const dateFormat = this.#date
 			.split('T')
 			.slice(0, 1)
 			.join('')
