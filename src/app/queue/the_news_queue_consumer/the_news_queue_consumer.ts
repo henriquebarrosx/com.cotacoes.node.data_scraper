@@ -1,6 +1,5 @@
 import { CmeWorker } from "../../worker/cme/cme_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
-import { AsyncQueue } from "../../../infra/async_queue/async_queue.ts";
 import { TheNewsWorker } from "../../worker/the_news/the_news_worker.ts";
 
 import type { TheNewsInput } from "../../worker/the_news/the_news_worker.ts";
@@ -9,16 +8,13 @@ import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broke
 export class TheNewsQueueConsumer {
 
 	readonly #theNewsWorker: TheNewsWorker;
-	readonly #asyncQueue: AsyncQueue;
 	readonly #messageBroker: MessageBroker;
 
 	constructor(
 		theNewsWorker: TheNewsWorker,
-		asyncQueue: AsyncQueue,
 		messageBroker: MessageBroker,
 	) {
 		this.#theNewsWorker = theNewsWorker;
-		this.#asyncQueue = asyncQueue;
 		this.#messageBroker = messageBroker;
 	}
 
@@ -32,34 +28,13 @@ export class TheNewsQueueConsumer {
 		);
 	}
 
-	private async processIncomingMessage({ correlationId, data, options }: ConsumerOutput) {
+	private async processIncomingMessage({ data, options }: ConsumerOutput) {
 		const { channel, message } = options;
 
-		this.#asyncQueue.add(correlationId, async () => {
-			const fromDate = this.getTargetDate(data);
-
-			try {
-				const news = await this.#theNewsWorker.execute(fromDate);
-				this.#messageBroker.confirm({ message, from: channel });
-
-				await this.#messageBroker.publish(
-					{
-						message: news,
-						to: queues.THE_NEWS_ARTICLE_STORE,
-					}
-				);
-			}
-
-			catch (error) {
-				this.#messageBroker.reject(
-					{
-						queue: queues.THE_NEWS_SCRAPER,
-						channel: channel,
-						message: message,
-					}
-				);
-			}
-		})
+		const fromDate = this.getTargetDate(data);
+		const news = await this.#theNewsWorker.execute(fromDate);
+		this.#messageBroker.confirm({ message, from: channel });
+		await this.#messageBroker.publish({ message: news, to: queues.THE_NEWS_ARTICLE_STORE });
 	}
 
 	private getTargetDate(data: string): string {

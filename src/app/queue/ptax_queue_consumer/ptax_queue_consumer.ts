@@ -1,6 +1,5 @@
 import { PtaxWorker } from "../../worker/ptax/ptax_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
-import { AsyncQueue } from "../../../infra/async_queue/async_queue.ts";
 
 import type { PtaxInput } from "../../worker/ptax/ptax_worker.ts";
 import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
@@ -8,16 +7,13 @@ import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broke
 export class PtaxQueueConsumer {
 
 	readonly #ptaxWorker: PtaxWorker;
-	readonly #asyncQueue: AsyncQueue;
 	readonly #messageBroker: MessageBroker;
 
 	constructor(
 		ptaxWorker: PtaxWorker,
-		asyncQueue: AsyncQueue,
 		messageBroker: MessageBroker,
 	) {
 		this.#ptaxWorker = ptaxWorker;
-		this.#asyncQueue = asyncQueue;
 		this.#messageBroker = messageBroker;
 	}
 
@@ -32,33 +28,12 @@ export class PtaxQueueConsumer {
 	}
 
 	private async processIncomingMessage(output: ConsumerOutput) {
-		const { correlationId, data, options: { channel, message } } = output;
+		const { data, options: { channel, message } } = output;
 
-		this.#asyncQueue.add(correlationId, async () => {
-			const fromDate = this.getTargetDate(data);
-
-			try {
-				const ptax = await this.#ptaxWorker.execute(fromDate);
-				this.#messageBroker.confirm({ message, from: channel });
-
-				await this.#messageBroker.publish(
-					{
-						message: ptax,
-						to: queues.PTAX_DATA_STORE,
-					}
-				);
-			}
-
-			catch (error) {
-				this.#messageBroker.reject(
-					{
-						queue: queues.PTAX_DATA_SCRAPER,
-						channel: channel,
-						message: message,
-					}
-				);
-			}
-		})
+		const fromDate = this.getTargetDate(data);
+		const ptax = await this.#ptaxWorker.execute(fromDate);
+		this.#messageBroker.confirm({ message: message, from: channel });
+		await this.#messageBroker.publish({ message: ptax, to: queues.PTAX_DATA_STORE });
 	}
 
 	private getTargetDate(data: string): string {

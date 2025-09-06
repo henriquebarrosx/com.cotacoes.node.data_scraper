@@ -25,7 +25,7 @@ export class RabbitMQFacade implements MessageBroker {
 				this.logger.info('[RabbitMQFacade] Establishing new connection');
 
 				const uri = process.env['RABBITMQ_URI'];
-				if (!uri) throw new Error('Cannot initilize message broker: uri not defined');
+				if (!uri) throw new Error('Cannot establish message broker connection: uri not defined');
 
 				this.conn = await Amqp.connect(uri);
 				this.logger.info('[RabbitMQFacade] Connection established');

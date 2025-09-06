@@ -1,6 +1,9 @@
 export type MessageBrokerQueues = typeof queues[keyof typeof queues];
 
 export const queues = {
+	/* PUPPETEER */
+	PUPPETEER_DATA_SCRAP: 'puppeteer_data_scrap',
+
 	/* CME */
 	CME_DATA_SCRAPER: 'cme_data_scraper',
 	CME_DATA_STORE: 'cme_data_store',
