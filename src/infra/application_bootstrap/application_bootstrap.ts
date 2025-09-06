@@ -1,4 +1,5 @@
 import { logger } from "../logger/index.ts";
+import { queues } from "../message_broker/queues.ts";
 import { messageBroker } from "../message_broker/index.ts";
 import { cmeQueueConsumer } from "../../app/queue/cme_queue_consumer/index.ts";
 import { ptaxQueueConsumer } from "../../app/queue/ptax_queue_consumer/index.ts";
