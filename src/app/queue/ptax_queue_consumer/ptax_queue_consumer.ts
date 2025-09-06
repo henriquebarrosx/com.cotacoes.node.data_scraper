@@ -52,7 +52,7 @@ export class PtaxQueueConsumer {
 			catch (error) {
 				this.#messageBroker.reject(
 					{
-						queue: queues.PTAX_DATA_STORE,
+						queue: queues.PTAX_DATA_SCRAPER,
 						channel: channel,
 						message: message,
 					}
