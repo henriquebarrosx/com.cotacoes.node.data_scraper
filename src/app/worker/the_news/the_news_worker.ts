@@ -1,5 +1,4 @@
 import Puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 import { TheNewsUrl } from './the_news_url.ts';
 
@@ -23,8 +22,6 @@ export class TheNewsWorker {
 
 		try {
 			this.#logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
-
-			Puppeteer.use(StealthPlugin());
 
 			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
 			browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });

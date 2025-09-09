@@ -1,3 +1,6 @@
+import Puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
 import { logger } from "../logger/index.ts";
 import { messageBroker } from "../message_broker/index.ts";
 import { cmeQueueConsumer } from "../../app/queue/cme_queue_consumer/index.ts";
@@ -16,6 +19,9 @@ export class ApplicationBootstrap {
 		await cmeQueueConsumer.register();
 		await ptaxQueueConsumer.register();
 		await theNewsQueueConsumer.register();
+
+		logger.info("[ApplicationBootstrap] — initializing puppeteer plugin configuration");
+		Puppeteer.use(StealthPlugin());
 	}
 
 }

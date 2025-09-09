@@ -1,5 +1,4 @@
 import Puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 import { Logger } from "../../../infra/logger/logger.ts";
 
@@ -18,8 +17,6 @@ export class CmeWorker {
 		let browser: Browser | null = null;
 
 		try {
-			Puppeteer.use(StealthPlugin());
-
 			const baseURL = process.env["CME_BASE_URL"];
 			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
 

@@ -1,5 +1,4 @@
 import Puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 import { PtaxUrl } from './ptax_url.ts';
 import { Logger } from "../../../infra/logger/logger.ts";
@@ -24,8 +23,6 @@ export class PtaxWorker {
 
 		try {
 			this.#logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
-
-			Puppeteer.use(StealthPlugin());
 
 			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
 			browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
