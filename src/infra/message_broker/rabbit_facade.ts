@@ -64,7 +64,7 @@ export class RabbitMQFacade implements MessageBroker {
 
 		const correlationId = crypto.randomUUID();
 
-		channel.sendToQueue(
+		const sent = channel.sendToQueue(
 			queue,
 			Buffer.from(JSON.stringify(message)),
 			{
@@ -73,6 +73,10 @@ export class RabbitMQFacade implements MessageBroker {
 				correlationId: correlationId,
 			},
 		);
+
+		if (sent) {
+			await channel.close();
+		}
 
 		this.#logger.info('[RabbitMQFacade] Publishing new message');
 		this.#logger.json({ id: correlationId, event: 'PUBLISH', queue: queue });
