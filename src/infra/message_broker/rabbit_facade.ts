@@ -44,6 +44,16 @@ export class RabbitMQFacade implements MessageBroker {
 		}
 	}
 
+	async close() {
+		this.#logger.info('[RabbitMQFacade] Establishing new connection');
+
+		if (!this.#conn) {
+			throw new Error('Cannot close connection: connection not found')
+		}
+
+		await this.#conn.close();
+	}
+
 	private async reconnect() {
 		this.#logger.info("[RabbitMQFacade] Trying establish new connection at 5s");
 		await this.sleep(5_000);
@@ -64,6 +74,9 @@ export class RabbitMQFacade implements MessageBroker {
 
 		const correlationId = crypto.randomUUID();
 
+		this.#logger.info('[RabbitMQFacade] Publishing new message');
+		this.#logger.json({ id: correlationId, queue: queue });
+
 		const sent = channel.sendToQueue(
 			queue,
 			Buffer.from(JSON.stringify(message)),
@@ -77,9 +90,6 @@ export class RabbitMQFacade implements MessageBroker {
 		if (sent) {
 			await channel.close();
 		}
-
-		this.#logger.info('[RabbitMQFacade] Publishing new message');
-		this.#logger.json({ id: correlationId, event: 'PUBLISH', queue: queue });
 	}
 
 	async listen({ queue, handler, options = {} }: ConsumeInput): Promise<void> {
@@ -102,7 +112,6 @@ export class RabbitMQFacade implements MessageBroker {
 				this.#logger.json(
 					{
 						id: message.properties.correlationId,
-						event: 'RECEIVED',
 						queue: queue,
 						args: {
 							retries: `${retryCount}/${this.MAX_ALLOWED_RETRIES}`,

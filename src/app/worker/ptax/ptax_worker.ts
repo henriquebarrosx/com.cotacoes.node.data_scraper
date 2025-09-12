@@ -1,10 +1,9 @@
-import Puppeteer from 'puppeteer-extra';
-
 import { PtaxUrl } from './ptax_url.ts';
-import { Logger } from "../../../infra/logger/logger.ts";
 
-import type { Browser, Page } from 'puppeteer';
+import type { Page } from 'puppeteer';
 import type { PtaxRawDTO } from './ptax_raw_dto.ts';
+import type { Logger } from "../../../infra/logger/logger.ts";
+import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
 export type PtaxInput = {
 	fromDate: string;
@@ -13,27 +12,23 @@ export type PtaxInput = {
 export class PtaxWorker {
 
 	readonly #logger: Logger;
+	readonly #browserManager: BrowserManagerFacade;
 
-	constructor(logger: Logger) {
+	constructor(logger: Logger, browserManager: BrowserManagerFacade) {
 		this.#logger = logger;
+		this.#browserManager = browserManager;
 	}
 
 	async execute(fromDate: string) {
-		let browser: Browser | null = null;
+		this.#logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
+
+		const browserContext = await this.#browserManager.createContext();
+		const page = await this.#browserManager.createPageInstance(browserContext);
 
 		try {
-			this.#logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
-
-			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
-			browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
-
-			const page = await browser.newPage();
-			await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
-			await page.setJavaScriptEnabled(true);
-			await page.setCacheEnabled(false);
-			const data = await this.scrapData(fromDate, page);
-			await browser.close();
-
+			const baseURL = new PtaxUrl(fromDate);
+			await this.#browserManager.navigate(page, baseURL.value);
+			const data = await this.scrapData(page);
 			return data.map((params) => ({ ...params, date: fromDate }));
 		}
 
@@ -42,27 +37,17 @@ export class PtaxWorker {
 				this.#logger.error(`[PtaxWorker] Ptax data scrap failed at date: ${fromDate}`, error.message);
 			}
 
-			if (browser) {
-				this.#logger.info('[PtaxWorker] Closing browser after failure');
-				await browser.close();
-			}
-
 			throw error;
+		}
+
+		finally {
+			await page.close();
+			await browserContext.close();
 		}
 	}
 
 
-	private async scrapData(fromDate: string, page: Page): Promise<PtaxRawDTO[]> {
-		const baseURL = new PtaxUrl(fromDate);
-
-		await page.goto(
-			baseURL.value,
-			{
-				waitUntil: 'domcontentloaded',
-				timeout: 60000,
-			}
-		);
-
+	private async scrapData(page: Page): Promise<PtaxRawDTO[]> {
 		await page.waitForSelector('table.tabela tbody tr');
 
 		const data = await page.evaluate(() => {

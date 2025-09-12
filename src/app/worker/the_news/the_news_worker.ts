@@ -1,9 +1,8 @@
-import Puppeteer from 'puppeteer-extra';
-
 import { TheNewsUrl } from './the_news_url.ts';
 
-import type { Browser, Page } from 'puppeteer';
+import type { Page } from 'puppeteer';
 import type { Logger } from "../../../infra/logger/logger.ts";
+import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
 export type TheNewsInput = {
 	fromDate: string;
@@ -12,27 +11,23 @@ export type TheNewsInput = {
 export class TheNewsWorker {
 
 	readonly #logger: Logger;
+	readonly #browserManager: BrowserManagerFacade;
 
-	constructor(logger: Logger) {
+	constructor(logger: Logger, browserManager: BrowserManagerFacade) {
 		this.#logger = logger;
+		this.#browserManager = browserManager;
 	}
 
 	async execute(fromDate: string) {
-		let browser: Browser | null = null;
+		this.#logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
+
+		const browserContext = await this.#browserManager.createContext();
+		const page = await this.#browserManager.createPageInstance(browserContext);
 
 		try {
-			this.#logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
-
-			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
-			browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
-
-			const page = await browser.newPage();
-			await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
-			await page.setJavaScriptEnabled(true);
-			await page.setCacheEnabled(false);
-			const data = await this.scrapData(fromDate, page);
-			await browser.close();
-
+			const baseURL = new TheNewsUrl(fromDate);
+			await this.#browserManager.navigate(page, baseURL.value);
+			const data = await this.scrapData(page);
 			return data;
 		}
 
@@ -41,26 +36,16 @@ export class TheNewsWorker {
 				this.#logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error.message);
 			}
 
-			if (browser) {
-				this.#logger.info('[TheNewsWorker] Closing browser after failure');
-				await browser.close();
-			}
-
 			throw error;
+		}
+
+		finally {
+			await page.close();
+			await browserContext.close();
 		}
 	}
 
-	private async scrapData(fromDate: string, page: Page): Promise<string> {
-		const baseURL = new TheNewsUrl(fromDate);
-
-		await page.goto(
-			baseURL.value,
-			{
-				waitUntil: 'domcontentloaded',
-				timeout: 60000,
-			}
-		);
-
+	private async scrapData(page: Page): Promise<string> {
 		const links = await page.evaluate(() => {
 			const container = document.querySelectorAll('div.grid div');
 
@@ -86,10 +71,7 @@ export class TheNewsWorker {
 		let content = '';
 
 		for await (const link of links) {
-			await page.goto(link, {
-				waitUntil: 'networkidle2',
-				timeout: 60000
-			});
+			await this.#browserManager.navigate(page, link);
 
 			const text = await page.evaluate(() => {
 				// @ts-ignore: it only exist at browser-side

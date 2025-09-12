@@ -1,34 +1,28 @@
-import Puppeteer from 'puppeteer-extra';
-
-import { Logger } from "../../../infra/logger/logger.ts";
-
-import type { Browser, Page } from 'puppeteer';
+import type { Page } from 'puppeteer';
 import type { CmeRawDTO } from './cme_raw_dto.ts';
+import type { Logger } from "../../../infra/logger/logger.ts";
+import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
 export class CmeWorker {
 
 	readonly #logger: Logger;
+	readonly #browserManager: BrowserManagerFacade;
 
-	constructor(logger: Logger) {
+	constructor(logger: Logger, browserManager: BrowserManagerFacade) {
 		this.#logger = logger;
+		this.#browserManager = browserManager;
 	}
 
 	async execute() {
-		let browser: Browser | null = null;
+		const browserContext = await this.#browserManager.createContext();
+		const page = await this.#browserManager.createPageInstance(browserContext);
 
 		try {
 			const baseURL = process.env["CME_BASE_URL"];
 			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
 
-			const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
-			browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
-
-			const page = await browser.newPage();
-			await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
-			await page.setJavaScriptEnabled(true);
-			await page.setCacheEnabled(false);
-			const data = await this.scrapData(page, baseURL);
-			await browser.close();
+			await this.#browserManager.navigate(page, baseURL);
+			const data = await this.scrapData(page);
 
 			return data[0];
 		}
@@ -38,25 +32,17 @@ export class CmeWorker {
 				this.#logger.error('[CmeWorker] Cme data scrap failed', error.message);
 			}
 
-			if (browser) {
-				this.#logger.info('[CmeWorker] Closing browser after failure');
-				await browser.close();
-			}
-
 			throw error;
+		}
+
+		finally {
+			await page.close();
+			await browserContext.close();
 		}
 	}
 
 
-	private async scrapData(page: Page, baseURL: string): Promise<CmeRawDTO[]> {
-		await page.goto(
-			baseURL,
-			{
-				waitUntil: 'domcontentloaded',
-				timeout: 60000,
-			}
-		);
-
+	private async scrapData(page: Page): Promise<CmeRawDTO[]> {
 		await page.waitForSelector('.main-table-wrapper table tbody tr');
 
 		const data = await page.evaluate(() => {

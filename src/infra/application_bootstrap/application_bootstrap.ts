@@ -1,8 +1,6 @@
-import Puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
 import { logger } from "../logger/index.ts";
 import { messageBroker } from "../message_broker/index.ts";
+import { browserManager } from '../browser_manager/index.ts';
 import { cmeQueueConsumer } from "../../app/queue/cme_queue_consumer/index.ts";
 import { ptaxQueueConsumer } from "../../app/queue/ptax_queue_consumer/index.ts";
 import { theNewsQueueConsumer } from "../../app/queue/the_news_queue_consumer/index.ts";
@@ -12,16 +10,25 @@ export class ApplicationBootstrap {
 	private constructor() { }
 
 	static async init() {
-		logger.info("[ApplicationBootstrap] — initializing core services");
-		await messageBroker.connect();
+		try {
+			logger.info("[ApplicationBootstrap] — initializing core services");
+			await messageBroker.connect();
+			await browserManager.launch();
 
-		logger.info("[ApplicationBootstrap] — initializing message broker queues");
-		await cmeQueueConsumer.register();
-		await ptaxQueueConsumer.register();
-		await theNewsQueueConsumer.register();
+			logger.info("[ApplicationBootstrap] — registering message broker consumers");
+			await Promise.allSettled(
+				[
+					await ptaxQueueConsumer.register(),
+					await cmeQueueConsumer.register(),
+					await theNewsQueueConsumer.register(),
+				]
+			)
+		}
 
-		logger.info("[ApplicationBootstrap] — initializing puppeteer plugin configuration");
-		Puppeteer.use(StealthPlugin());
+		catch {
+			await messageBroker.close();
+			await browserManager.close();
+		}
 	}
 
 }
