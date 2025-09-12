@@ -13,7 +13,6 @@ export class BrowserManagerFacade {
 	readonly #logger: Logger;
 
 	#browser: Browser | null = null;
-	#signalHandlersRegistered = false;
 
 	private constructor(logger: Logger) {
 		this.#logger = logger;

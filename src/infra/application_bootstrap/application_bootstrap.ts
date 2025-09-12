@@ -16,13 +16,9 @@ export class ApplicationBootstrap {
 			await browserManager.launch();
 
 			logger.info("[ApplicationBootstrap] — registering message broker consumers");
-			await Promise.allSettled(
-				[
-					await ptaxQueueConsumer.register(),
-					await cmeQueueConsumer.register(),
-					await theNewsQueueConsumer.register(),
-				]
-			)
+			await ptaxQueueConsumer.register();
+			await cmeQueueConsumer.register();
+			await theNewsQueueConsumer.register();
 		}
 
 		catch {
