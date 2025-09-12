@@ -27,7 +27,7 @@ export class ApplicationBootstrap {
 
 		catch {
 			await messageBroker.close();
-			await browserManager.close();
+			await browserManager.closeBrowser();
 		}
 	}
 

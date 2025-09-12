@@ -50,7 +50,7 @@ export class BrowserManagerFacade {
 		 * Enviado quando o usuário aperta Ctrl +C no terminal para interromper o processo.
 		*/
 		process.once('SIGINT', async () => {
-			await this.close();
+			await this.closeBrowser();
 			process.exit(1);
 		});
 
@@ -60,7 +60,7 @@ export class BrowserManagerFacade {
 		 * (ex.: Docker, Kubernetes) para desligar um serviço.
 		*/
 		process.once('SIGTERM', async () => {
-			await this.close();
+			await this.closeBrowser();
 			process.exit(1);
 		});
 
@@ -70,7 +70,7 @@ export class BrowserManagerFacade {
 		 * como reinício em depuração (node --inspect).
 		*/
 		process.once('SIGUSR2', async () => {
-			await this.close();
+			await this.closeBrowser();
 			process.kill(process.pid, 'SIGUSR2');
 			process.exit(1);
 		});
@@ -81,12 +81,12 @@ export class BrowserManagerFacade {
 		 * que o processo deve recarregar configuração ou reiniciar.
 		*/
 		process.once('SIGHUP', async () => {
-			await this.close();
+			await this.closeBrowser();
 			process.exit(1);
 		});
 	}
 
-	async close() {
+	async closeBrowser() {
 		this.#logger.info("[BrowserManagerFacade] — Closing browser");
 
 		if (!this.#browser) {
