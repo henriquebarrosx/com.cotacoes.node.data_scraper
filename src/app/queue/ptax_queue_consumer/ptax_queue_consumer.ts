@@ -1,6 +1,6 @@
-import { PtaxWorker } from "../../worker/ptax/ptax_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
 
+import type { PtaxWorker } from "../../worker/ptax/ptax_worker.ts";
 import type { PtaxInput } from "../../worker/ptax/ptax_worker.ts";
 import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 

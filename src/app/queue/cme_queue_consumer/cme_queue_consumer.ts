@@ -1,6 +1,6 @@
-import { CmeWorker } from "../../worker/cme/cme_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
 
+import type { CmeWorker } from "../../worker/cme/cme_worker.ts";
 import type { MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
 export class CmeQueueConsumer {

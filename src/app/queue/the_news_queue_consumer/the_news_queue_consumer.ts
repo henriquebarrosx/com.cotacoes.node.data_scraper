@@ -1,7 +1,6 @@
-import { CmeWorker } from "../../worker/cme/cme_worker.ts";
 import { queues } from "../../../infra/message_broker/queues.ts";
-import { TheNewsWorker } from "../../worker/the_news/the_news_worker.ts";
 
+import type { TheNewsWorker } from "../../worker/the_news/the_news_worker.ts";
 import type { TheNewsInput } from "../../worker/the_news/the_news_worker.ts";
 import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
