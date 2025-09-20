@@ -98,11 +98,12 @@ export class BrowserManagerFacade {
 	async createContext(): Promise<BrowserContext> {
 		this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
 
-		if (!this.#browser) {
-			throw new Error('Browser context creation failed: browser not launched');
+		if (this.#browser) {
+			return await this.#browser.createBrowserContext();
 		}
 
-		return await this.#browser.createBrowserContext();
+		await this.launch();
+		return this.createContext();
 	}
 
 	async createPageInstance(context: BrowserContext): Promise<Page> {
@@ -126,7 +127,7 @@ export class BrowserManagerFacade {
 		await pageInstance.goto(
 			baseURL,
 			{
-				waitUntil: 'domcontentloaded',
+				waitUntil: 'networkidle2',
 				timeout: 60000,
 			}
 		);
