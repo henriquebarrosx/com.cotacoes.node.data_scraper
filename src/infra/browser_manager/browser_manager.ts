@@ -127,7 +127,7 @@ export class BrowserManagerFacade {
 		await pageInstance.goto(
 			baseURL,
 			{
-				waitUntil: 'networkidle2',
+				waitUntil: 'networkidle0',
 				timeout: 60000,
 			}
 		);
