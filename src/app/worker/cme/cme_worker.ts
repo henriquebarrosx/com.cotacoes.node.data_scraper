@@ -43,7 +43,10 @@ export class CmeWorker {
 
 
 	private async scrapData(page: Page): Promise<CmeRawDTO[]> {
-		await page.waitForSelector('.main-table-wrapper table tbody tr');
+		await page.waitForSelector(
+			'.main-table-wrapper table tbody tr',
+			{ timeout: 30_000 },
+		);
 
 		const data = await page.evaluate(() => {
 			// @ts-ignore: it only exist at browser-side
