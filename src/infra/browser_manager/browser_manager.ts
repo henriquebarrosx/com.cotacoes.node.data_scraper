@@ -6,6 +6,11 @@ import type { Logger } from '../logger/logger.ts';
 
 import { logger } from '../logger/index.ts';
 
+type WaitUntil =
+	| 'networkidle0'		/* Waits for no more than 0 network connections for at least 500 ms. */
+	| 'networkidle2'		/* Waits for no more than 2 network connections for at least 500 ms. */
+	| 'load'				/* Waits for the load event to fire. */
+	| 'domcontentloaded'	/* Waits for the DOMContentLoaded event to fire. */
 
 export class BrowserManagerFacade {
 	private static instance: BrowserManagerFacade;
@@ -124,10 +129,12 @@ export class BrowserManagerFacade {
 	async navigate(pageInstance: Page, baseURL: string): Promise<void> {
 		this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
 
+		const waitUntil: WaitUntil = 'domcontentloaded';
+
 		await pageInstance.goto(
 			baseURL,
 			{
-				waitUntil: 'networkidle0',
+				waitUntil: waitUntil,
 				timeout: 60000,
 			}
 		);
