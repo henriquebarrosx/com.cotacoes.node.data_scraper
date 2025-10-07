@@ -61,7 +61,7 @@ export class BrowserManagerFacade {
 	private setupBrowserClosureScheduler(): void {
 		this.#closeEventTimeout = setTimeout(async () => {
 			await this.closeBrowser();
-		}, 60_000);
+		}, 300_000);
 	}
 
 	private setupGracefulShutdown() {
@@ -144,6 +144,7 @@ export class BrowserManagerFacade {
 
 	async navigate(pageInstance: Page, baseURL: string): Promise<void> {
 		this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
+		this.skipScheduledBrowserClosure();
 
 		const waitUntil: WaitUntil = 'domcontentloaded';
 
