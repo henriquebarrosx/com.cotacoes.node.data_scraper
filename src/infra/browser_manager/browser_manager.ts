@@ -65,6 +65,8 @@ export class BrowserManagerFacade {
 	}
 
 	private setupBrowserClosureScheduler(): void {
+		this.#logger.info("[BrowserManagerFacade] — Setting up browser closure scheduler");
+
 		const FIVE_MINUTES_IN_MILLISECONDS = 300_000;
 
 		this.#closeEventTimeout = setTimeout(async () => {
