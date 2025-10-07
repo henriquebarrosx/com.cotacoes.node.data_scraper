@@ -4,6 +4,7 @@ import { browserManager } from '../browser_manager/index.ts';
 import { cmeQueueConsumer } from "../../app/queue/cme_queue_consumer/index.ts";
 import { ptaxQueueConsumer } from "../../app/queue/ptax_queue_consumer/index.ts";
 import { theNewsQueueConsumer } from "../../app/queue/the_news_queue_consumer/index.ts";
+import { queues } from "../message_broker/queues.ts";
 
 export class ApplicationBootstrap {
 
@@ -19,6 +20,13 @@ export class ApplicationBootstrap {
 			await ptaxQueueConsumer.register();
 			await cmeQueueConsumer.register();
 			await theNewsQueueConsumer.register();
+
+			await messageBroker.publish(
+				{
+					to: queues.CME_DATA_SCRAPER,
+					message: null,
+				}
+			)
 		}
 
 		catch {

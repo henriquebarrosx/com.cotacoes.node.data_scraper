@@ -18,6 +18,7 @@ export class BrowserManagerFacade {
 	readonly #logger: Logger;
 
 	#browser: Browser | null = null;
+	#closeEventTimeout: NodeJS.Timeout | null = null;
 
 	private constructor(logger: Logger) {
 		this.#logger = logger;
@@ -39,13 +40,28 @@ export class BrowserManagerFacade {
 			return;
 		}
 
+		this.skipScheduledBrowserClosure();
+
 		Puppeteer.use(StealthPlugin());
 		const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
 		this.#browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
 
+		this.setupBrowserClosureScheduler();
 		this.setupGracefulShutdown();
 
 		this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
+	}
+
+	private skipScheduledBrowserClosure(): void {
+		if (this.#closeEventTimeout) {
+			clearTimeout(this.#closeEventTimeout);
+		}
+	}
+
+	private setupBrowserClosureScheduler(): void {
+		this.#closeEventTimeout = setTimeout(async () => {
+			await this.closeBrowser();
+		}, 60_000);
 	}
 
 	private setupGracefulShutdown() {
