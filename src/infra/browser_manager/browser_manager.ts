@@ -46,22 +46,29 @@ export class BrowserManagerFacade {
 		const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
 		this.#browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
 
-		this.setupBrowserClosureScheduler();
 		this.setupGracefulShutdown();
 
 		this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
 	}
 
+	/**
+	 * Ensure the browser is periodically restarted to avoid long-lived Chromium 
+	 * processes that accumulate pages/listeners and cause resource leaks or instability.
+	*/
 	private skipScheduledBrowserClosure(): void {
 		if (this.#closeEventTimeout) {
+			this.#logger.info("[BrowserManagerFacade] — Skipping scheduled browser closure");
 			clearTimeout(this.#closeEventTimeout);
+			this.setupBrowserClosureScheduler();
 		}
 	}
 
 	private setupBrowserClosureScheduler(): void {
+		const FIVE_MINUTES_IN_MILLISECONDS = 300_000;
+
 		this.#closeEventTimeout = setTimeout(async () => {
 			await this.closeBrowser();
-		}, 300_000);
+		}, FIVE_MINUTES_IN_MILLISECONDS);
 	}
 
 	private setupGracefulShutdown() {
