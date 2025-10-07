@@ -124,6 +124,7 @@ export class BrowserManagerFacade {
 		}
 
 		await this.#browser.close();
+		this.#browser = null;
 	}
 
 	async createContext(): Promise<BrowserContext> {
