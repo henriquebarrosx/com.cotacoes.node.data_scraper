@@ -59,8 +59,9 @@ export class BrowserManagerFacade {
 		if (this.#closeEventTimeout) {
 			this.#logger.info("[BrowserManagerFacade] — Skipping scheduled browser closure");
 			clearTimeout(this.#closeEventTimeout);
-			this.setupBrowserClosureScheduler();
 		}
+
+		this.setupBrowserClosureScheduler();
 	}
 
 	private setupBrowserClosureScheduler(): void {
