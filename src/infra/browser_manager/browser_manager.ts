@@ -21,6 +21,7 @@ export class BrowserManagerFacade {
 	#closeEventTimeout: NodeJS.Timeout | null = null;
 
 	private constructor(logger: Logger) {
+		Puppeteer.use(StealthPlugin());
 		this.#logger = logger;
 	}
 
@@ -40,15 +41,27 @@ export class BrowserManagerFacade {
 			return;
 		}
 
-		this.skipScheduledBrowserClosure();
-
-		Puppeteer.use(StealthPlugin());
-		const puppeteerArgs = ['--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'];
-		this.#browser = await Puppeteer.launch({ args: puppeteerArgs, headless: true });
+		this.#browser = await Puppeteer.launch(
+			{
+				headless: true,
+				args: [
+					'--no-sandbox',
+					'--disable-setuid-sandbox',
+					'--disable-http2',
+				],
+			}
+		);
 
 		this.setupGracefulShutdown();
-
 		this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
+	}
+
+	async closeBrowser() {
+		if (this.#browser?.connected === false) {
+			this.#logger.info("[BrowserManagerFacade] — Closing browser");
+			await this.#browser.close();
+			this.#browser = null;
+		}
 	}
 
 	/**
@@ -57,7 +70,6 @@ export class BrowserManagerFacade {
 	*/
 	private skipScheduledBrowserClosure(): void {
 		if (this.#closeEventTimeout) {
-			this.#logger.info("[BrowserManagerFacade] — Skipping scheduled browser closure");
 			clearTimeout(this.#closeEventTimeout);
 		}
 
@@ -65,13 +77,12 @@ export class BrowserManagerFacade {
 	}
 
 	private setupBrowserClosureScheduler(): void {
-		this.#logger.info("[BrowserManagerFacade] — Setting up browser closure scheduler");
+		const FIVE_MINUTES_IN_MILLISECONDS = 60_000 * 5;
 
-		const FIVE_MINUTES_IN_MILLISECONDS = 300_000;
-
-		this.#closeEventTimeout = setTimeout(async () => {
-			await this.closeBrowser();
-		}, FIVE_MINUTES_IN_MILLISECONDS);
+		this.#closeEventTimeout = setTimeout(
+			async () => await this.closeBrowser(),
+			FIVE_MINUTES_IN_MILLISECONDS
+		);
 	}
 
 	private setupGracefulShutdown() {
@@ -116,22 +127,13 @@ export class BrowserManagerFacade {
 		});
 	}
 
-	async closeBrowser() {
-		this.#logger.info("[BrowserManagerFacade] — Closing browser");
-
-		if (!this.#browser) {
-			throw new Error('Cannot close browser: browser not launched');
-		}
-
-		await this.#browser.close();
-		this.#browser = null;
-	}
-
 	async createContext(): Promise<BrowserContext> {
 		this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
+		this.skipScheduledBrowserClosure();
 
 		if (this.#browser) {
-			return await this.#browser.createBrowserContext();
+			const ctx = await this.#browser.createBrowserContext();
+			return ctx;
 		}
 
 		await this.launch();
@@ -155,8 +157,6 @@ export class BrowserManagerFacade {
 
 	async navigate(pageInstance: Page, baseURL: string): Promise<void> {
 		this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
-		this.skipScheduledBrowserClosure();
-
 		const waitUntil: WaitUntil = 'domcontentloaded';
 
 		await pageInstance.goto(
