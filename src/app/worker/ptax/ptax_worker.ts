@@ -43,6 +43,7 @@ export class PtaxWorker {
 		finally {
 			await page.close();
 			await browserContext.close();
+			await this.#browserManager.closeBrowser();
 		}
 	}
 

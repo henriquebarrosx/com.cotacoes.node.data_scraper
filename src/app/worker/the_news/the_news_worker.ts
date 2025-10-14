@@ -42,6 +42,7 @@ export class TheNewsWorker {
 		finally {
 			await page.close();
 			await browserContext.close();
+			await this.#browserManager.closeBrowser();
 		}
 	}
 

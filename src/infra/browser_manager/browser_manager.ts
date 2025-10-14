@@ -48,6 +48,9 @@ export class BrowserManagerFacade {
 					'--no-sandbox',
 					'--disable-setuid-sandbox',
 					'--disable-http2',
+					'--incognito',
+					'--disk-cache-size=0',
+					'--disable-cache'
 				],
 			}
 		);
@@ -57,31 +60,23 @@ export class BrowserManagerFacade {
 	}
 
 	async closeBrowser() {
-		if (this.#browser?.connected === false) {
+		if (this.#browser && this.#browser.connected === false) {
 			this.#logger.info("[BrowserManagerFacade] — Closing browser");
 			await this.#browser.close();
 			this.#browser = null;
-		}
-	}
-
-	/**
-	 * Ensure the browser is periodically restarted to avoid long-lived Chromium 
-	 * processes that accumulate pages/listeners and cause resource leaks or instability.
-	*/
-	private skipScheduledBrowserClosure(): void {
-		if (this.#closeEventTimeout) {
-			clearTimeout(this.#closeEventTimeout);
 		}
 
 		this.setupBrowserClosureScheduler();
 	}
 
 	private setupBrowserClosureScheduler(): void {
-		const FIVE_MINUTES_IN_MILLISECONDS = 60_000 * 5;
+		if (this.#closeEventTimeout) {
+			clearTimeout(this.#closeEventTimeout);
+		}
 
 		this.#closeEventTimeout = setTimeout(
 			async () => await this.closeBrowser(),
-			FIVE_MINUTES_IN_MILLISECONDS
+			60_000
 		);
 	}
 
@@ -129,7 +124,6 @@ export class BrowserManagerFacade {
 
 	async createContext(): Promise<BrowserContext> {
 		this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
-		this.skipScheduledBrowserClosure();
 
 		if (this.#browser) {
 			const ctx = await this.#browser.createBrowserContext();
