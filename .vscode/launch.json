@@ -1,0 +1,15 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Custom Node.js",
+			"runtimeArgs": [
+				"--env-file=.env",
+				"--watch"
+			],
+			"program": "${workspaceFolder}/src/main.ts"
+		}
+	]
+}
