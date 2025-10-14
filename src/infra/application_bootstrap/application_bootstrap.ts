@@ -13,7 +13,6 @@ export class ApplicationBootstrap {
 		try {
 			logger.info("[ApplicationBootstrap] — initializing core services");
 			await messageBroker.connect();
-			await browserManager.launch();
 
 			logger.info("[ApplicationBootstrap] — registering message broker consumers");
 			await ptaxQueueConsumer.register();
