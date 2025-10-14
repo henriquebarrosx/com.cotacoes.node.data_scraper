@@ -60,24 +60,21 @@ export class BrowserManagerFacade {
 	}
 
 	async closeBrowser() {
-		if (this.#closeEventTimeout) {
-			clearTimeout(this.#closeEventTimeout);
-		}
+		if (this.#closeEventTimeout) clearTimeout(this.#closeEventTimeout);
+		if (!this.#browser) return
 
-		if (this.#browser && this.#browser.connected === false) {
-			this.#logger.info("[BrowserManagerFacade] — Closing browser");
-			await this.#browser.close();
-			this.#browser = null;
-			return;
-		}
+		const hasActiveWorkContexts = this.#browser.browserContexts().length > 1;
+		if (hasActiveWorkContexts) return this.setupBrowserClosureScheduler();
 
-		this.setupBrowserClosureScheduler();
+		this.#logger.info("[BrowserManagerFacade] — Closing browser");
+		await this.#browser.close();
+		this.#browser = null;
 	}
 
 	private setupBrowserClosureScheduler(): void {
 		this.#closeEventTimeout = setTimeout(
 			async () => await this.closeBrowser(),
-			60_000
+			5_000
 		);
 	}
 
@@ -124,9 +121,8 @@ export class BrowserManagerFacade {
 	}
 
 	async createContext(): Promise<BrowserContext> {
-		this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
-
 		if (this.#browser) {
+			this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
 			const ctx = await this.#browser.createBrowserContext();
 			return ctx;
 		}
