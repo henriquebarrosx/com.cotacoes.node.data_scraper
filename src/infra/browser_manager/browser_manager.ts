@@ -60,20 +60,21 @@ export class BrowserManagerFacade {
 	}
 
 	async closeBrowser() {
+		if (this.#closeEventTimeout) {
+			clearTimeout(this.#closeEventTimeout);
+		}
+
 		if (this.#browser && this.#browser.connected === false) {
 			this.#logger.info("[BrowserManagerFacade] — Closing browser");
 			await this.#browser.close();
 			this.#browser = null;
+			return;
 		}
 
 		this.setupBrowserClosureScheduler();
 	}
 
 	private setupBrowserClosureScheduler(): void {
-		if (this.#closeEventTimeout) {
-			clearTimeout(this.#closeEventTimeout);
-		}
-
 		this.#closeEventTimeout = setTimeout(
 			async () => await this.closeBrowser(),
 			60_000
