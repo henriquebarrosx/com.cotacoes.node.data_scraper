@@ -1,6 +1,6 @@
 export function createLogger(): Logger {
 	function info(message: string, ...args: unknown[]): void {
-		console.log(`INFO (${getFormattedDateTime()}): ${message}`, ...args);
+		console.log(`INFO (${getFormattedDateTime()}): ${message}\n`, ...args);
 	}
 
 	function error(message: string, ...args: unknown[]): void {

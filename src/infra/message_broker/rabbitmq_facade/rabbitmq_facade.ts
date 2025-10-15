@@ -60,7 +60,10 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 
 		logger.info(
 			'[RabbitMQFacade] Publishing new message',
-			{ id: correlationId, queue: queue }
+			{
+				id: correlationId,
+				queue: queue,
+			}
 		);
 
 		const hasBeenSent = channel.sendToQueue(
