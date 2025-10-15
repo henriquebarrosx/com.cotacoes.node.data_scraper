@@ -1,39 +1,31 @@
-import { TheNewsUrl } from './the_news_url.ts';
 
 import type { Page } from 'puppeteer';
-import type { Logger } from "../../../infra/logger/logger.ts";
-import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
-export type TheNewsInput = {
-	fromDate: string;
-}
+import { TheNewsUrl } from '../../domain/the_news_url.ts';
 
-export class TheNewsWorker {
+import { type AppWorker } from '../worker.ts';
+import { type Logger } from "../../../infra/logger/logger.ts";
+import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
-	readonly #logger: Logger;
-	readonly #browserManager: BrowserManagerFacade;
+export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker<string> {
+	const { logger, browserManager } = providers;
 
-	constructor(logger: Logger, browserManager: BrowserManagerFacade) {
-		this.#logger = logger;
-		this.#browserManager = browserManager;
-	}
+	async function execute(fromDate: string): Promise<string> {
+		logger.info(`[TheNewsWorker] Scrapping the news data at date: ${fromDate}`);
 
-	async execute(fromDate: string) {
-		this.#logger.info(`[PtaxWorker] Scrapping TheNews data at date: ${fromDate}`);
-
-		const browserContext = await this.#browserManager.createContext();
-		const page = await this.#browserManager.createPageInstance(browserContext);
+		const browserContext = await browserManager.createContext();
+		const page = await browserManager.createPageInstance(browserContext);
 
 		try {
 			const baseURL = new TheNewsUrl(fromDate);
-			await this.#browserManager.navigate(page, baseURL.value);
-			const data = await this.scrapData(page);
+			await browserManager.navigate(page, baseURL.value);
+			const data = await scrapData(page);
 			return data;
 		}
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.#logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error.message);
+				logger.error(`[TheNewsWorker] TheNews data scrap failed at date: ${fromDate}`, error.message);
 			}
 
 			throw error;
@@ -42,11 +34,11 @@ export class TheNewsWorker {
 		finally {
 			await page.close();
 			await browserContext.close();
-			await this.#browserManager.closeBrowser();
+			await browserManager.closeBrowser();
 		}
 	}
 
-	private async scrapData(page: Page): Promise<string> {
+	async function scrapData(page: Page): Promise<string> {
 		const links = await page.evaluate(() => {
 			const container = document.querySelectorAll('div.grid div');
 
@@ -72,7 +64,7 @@ export class TheNewsWorker {
 		let content = '';
 
 		for await (const link of links) {
-			await this.#browserManager.navigate(page, link);
+			await browserManager.navigate(page, link);
 
 			const text = await page.evaluate(() => {
 				// @ts-ignore: it only exist at browser-side
@@ -91,4 +83,14 @@ export class TheNewsWorker {
 		return content;
 	}
 
+	return {
+		execute,
+	}
+}
+
+type TheNewsWorkerArgs = {
+	providers: {
+		logger: Logger;
+		browserManager: BrowserManagerFacade;
+	}
 }

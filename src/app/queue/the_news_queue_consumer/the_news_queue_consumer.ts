@@ -1,41 +1,53 @@
+import { Worker } from "worker_threads";
+
 import { queues } from "../../../infra/message_broker/queues.ts";
 
-import type { TheNewsWorker } from "../../worker/the_news/the_news_worker.ts";
-import type { TheNewsInput } from "../../worker/the_news/the_news_worker.ts";
-import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
+import { type Consumer } from "../consumer.ts";
+import { type Logger } from "../../../infra/logger/logger.ts";
+import type { ConsumerHandlerParam, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
-export class TheNewsQueueConsumer {
+export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerArgs): Consumer {
+	const { logger, messageBroker } = providers;
 
-	readonly #theNewsWorker: TheNewsWorker;
-	readonly #messageBroker: MessageBroker;
-
-	constructor(
-		theNewsWorker: TheNewsWorker,
-		messageBroker: MessageBroker,
-	) {
-		this.#theNewsWorker = theNewsWorker;
-		this.#messageBroker = messageBroker;
-	}
-
-	async register() {
-		await this.#messageBroker.listen(
+	async function register() {
+		await messageBroker.listen(
 			{
 				queue: queues.THE_NEWS_SCRAPER,
-				handler: (...args) => this.processIncomingMessage(...args),
+				handler: (...args) => processIncomingMessage(...args),
 				options: { prefetch: 1 }
 			}
 		);
 	}
 
-	private async processIncomingMessage({ data }: ConsumerOutput) {
-		const fromDate = this.getTargetDate(data);
-		const news = await this.#theNewsWorker.execute(fromDate);
-		await this.#messageBroker.publish({ message: news, to: queues.THE_NEWS_ARTICLE_STORE });
+	async function processIncomingMessage({ data }: ConsumerHandlerParam) {
+		logger.info("[TheNewsQueueConsumer] Posting message to worker...");
+
+		const workerURL = new URL("../../worker/the_news/runner.ts", import.meta.url)
+		const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
+
+		worker.on('message', (result) => {
+			logger.info("[TheNewsQueueConsumer] Worker finished processing message successfully.");
+			messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
+		})
+
+		worker.on("error", (error) => {
+			logger.error("[TheNewsQueueConsumer] Worker failed to execute:", error);
+		});
 	}
 
-	private getTargetDate(data: string): string {
-		const { fromDate } = JSON.parse(data) as TheNewsInput;
+	function getTargetDate(data: string): string {
+		const { fromDate } = JSON.parse(data);
 		return fromDate
 	}
 
+	return {
+		register,
+	}
+}
+
+type TheNewsQueueConsumerArgs = {
+	providers: {
+		logger: Logger;
+		messageBroker: MessageBroker;
+	}
 }

@@ -8,22 +8,13 @@ export function createApplicationBootstrap({ providers }: ApplicationBootstrapAr
 
 	async function init(): Promise<void> {
 		try {
-			logger.info("[ApplicationBootstrap] — initializing core services");
+			logger.info("[ApplicationBootstrap] Initializing core services");
 			await messageBroker.connect();
 
-			logger.info("[ApplicationBootstrap] — registering message broker consumers");
+			logger.info("[ApplicationBootstrap] Registering message broker consumers");
 			await cmeQueueConsumer.register();
 			await theNewsQueueConsumer.register();
 			await ptaxQueueConsumer.register();
-
-			// await messageBroker.publish(
-			// 	{
-			// 		to: queues.PTAX_DATA_SCRAPER,
-			// 		message: {
-			// 			fromDate: "2025-10-10T13:00:00",
-			// 		}
-			// 	}
-			// )
 		}
 
 		catch {
