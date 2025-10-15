@@ -1,35 +1,30 @@
 import type { Page } from 'puppeteer';
-import type { CmeRawDTO } from '../../dto/cme_raw_dto.ts';
-import type { Logger } from "../../../infra/logger/logger.ts";
-import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
-export class CmeWorker {
+import { type AppWorker } from '../worker.ts';
+import { type RawCmeDTO } from '../../dto/raw-cme-dto.ts';
+import { type Logger } from "../../../infra/logger/logger.ts";
+import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 
-	readonly #logger: Logger;
-	readonly #browserManager: BrowserManagerFacade;
+export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeDTO> {
+	const { logger, browserManager } = providers;
 
-	constructor(logger: Logger, browserManager: BrowserManagerFacade) {
-		this.#logger = logger;
-		this.#browserManager = browserManager;
-	}
-
-	async execute() {
-		const browserContext = await this.#browserManager.createContext();
-		const page = await this.#browserManager.createPageInstance(browserContext);
+	async function execute(): Promise<RawCmeDTO> {
+		const browserContext = await browserManager.createContext();
+		const page = await browserManager.createPageInstance(browserContext);
 
 		try {
 			const baseURL = process.env["CME_BASE_URL"];
 			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
 
-			await this.#browserManager.navigate(page, baseURL);
-			const data = await this.scrapData(page);
+			await browserManager.navigate(page, baseURL);
+			const data = await scrapData(page);
 
 			return data[0];
 		}
 
 		catch (error) {
 			if (error instanceof Error) {
-				this.#logger.error('[CmeWorker] Cme data scrap failed', error.message);
+				logger.error('[CmeWorker] Cme data scrap failed', error.message);
 			}
 
 			throw error;
@@ -38,12 +33,11 @@ export class CmeWorker {
 		finally {
 			await page.close();
 			await browserContext.close();
-			await this.#browserManager.closeBrowser();
+			await browserManager.closeBrowser();
 		}
 	}
 
-
-	private async scrapData(page: Page): Promise<CmeRawDTO[]> {
+	async function scrapData(page: Page): Promise<RawCmeDTO[]> {
 		await page.waitForSelector(
 			'.main-table-wrapper table tbody tr',
 			{ timeout: 30_000 },
@@ -52,7 +46,7 @@ export class CmeWorker {
 		const data = await page.evaluate(() => {
 			// @ts-ignore: it only exist at browser-side
 			const rows = document.querySelectorAll('.main-table-wrapper table tbody tr');
-			const data: CmeRawDTO[] = [];
+			const data: RawCmeDTO[] = [];
 
 			rows.forEach((row) => {
 				const columns = row.querySelectorAll('td');
@@ -74,5 +68,16 @@ export class CmeWorker {
 		});
 
 		return data;
+	}
+
+	return {
+		execute,
+	}
+}
+
+type CmeWorkerArgs = {
+	providers: {
+		logger: Logger;
+		browserManager: BrowserManagerFacade;
 	}
 }
