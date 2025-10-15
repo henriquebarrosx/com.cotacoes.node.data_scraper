@@ -45,7 +45,7 @@ export class RabbitMQFacade implements MessageBroker {
 	}
 
 	async close() {
-		this.#logger.info('[RabbitMQFacade] Establishing new connection');
+		this.#logger.info('[RabbitMQFacade] Closing connection');
 
 		if (!this.#conn) {
 			throw new Error('Cannot close connection: connection not found')
