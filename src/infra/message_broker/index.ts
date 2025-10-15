@@ -1,3 +1,10 @@
-import { RabbitMQSingleton } from "./rabbit_singleton.ts";
+import { logger } from "../logger/index.ts";
+import { createRabbitMQFacade } from "./rabbitmq_facade/rabbitmq_facade.ts";
 
-export const messageBroker = RabbitMQSingleton.getInstance();
+export const messageBroker = createRabbitMQFacade(
+	{
+		providers: {
+			logger: logger
+		}
+	}
+)

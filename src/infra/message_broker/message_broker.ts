@@ -1,14 +1,14 @@
 import * as Amqp from 'amqplib';
-import type { MessageBrokerQueues } from "./queues.ts";
+import { type MessageBrokerQueues } from "./queues.ts";
 
 export interface MessageBroker {
 	connect(): Promise<void>;
-	publish(params: PublishInput): Promise<void>;
-	listen(params: ConsumeInput): Promise<void>;
+	publish(args: PublishArgs): Promise<void>;
+	listen(args: ConsumeArgs): Promise<void>;
 	close(): Promise<void>;
 }
 
-export type PublishInput = {
+export type PublishArgs = {
 	to: MessageBrokerQueues;
 	message: unknown;
 	options?: {
@@ -16,20 +16,25 @@ export type PublishInput = {
 	}
 }
 
-export type ConsumeInput = {
+export type ConsumeArgs = {
 	queue: MessageBrokerQueues;
-	handler: (output: ConsumerOutput) => Promise<void>;
-	options?: Partial<ConsumerInputOptions>
+	handler: (param: ConsumerHandlerParam) => Promise<void>;
+	options?: Partial<ConsumerOptions>
 }
 
-export type ConsumerInputOptions = {
+export type ConsumerOptions = {
 	/** number of concurrency incoming messages */
 	prefetch: number;
 }
 
-export type ConsumerOutput = {
+export type ConsumerHandlerParam = {
 	correlationId: string;
 	data: string;
+}
+
+export type ConsumerOnMessageHandler = Omit<ConsumeArgs, 'options'> & {
+	message: Amqp.Message;
+	channel: Amqp.Channel;
 }
 
 export type RetryOptions = {
