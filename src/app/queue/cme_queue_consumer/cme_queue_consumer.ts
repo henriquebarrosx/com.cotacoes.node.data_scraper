@@ -1,11 +1,14 @@
+
+import { Worker } from "worker_threads";
+
 import { queues } from "../../../infra/message_broker/queues.ts";
 
 import { type Consumer } from "../consumer.ts";
-import { type CmeWorker } from "../../worker/cme/worker.ts";
+import { type Logger } from "../../../infra/logger/logger.ts";
 import { type MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
 export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Consumer {
-	const { worker, messageBroker } = providers;
+	const { logger, messageBroker } = providers;
 
 	async function register() {
 		await messageBroker.listen(
@@ -18,8 +21,21 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
 	}
 
 	async function processIncomingMessage() {
-		const cme = await worker.execute();
-		await messageBroker.publish({ message: cme, to: queues.CME_DATA_STORE });
+		logger.info("[CmeQueueConsumer] Posting message to worker...");
+
+		const workerURL = new URL("../../worker/cme/runner.ts", import.meta.url)
+		const worker = new Worker(workerURL);
+
+		worker.on('message', (result) => {
+			logger.info("[CmeQueueConsumer] Worker finished processing message successfully.");
+			messageBroker.publish({ message: result, to: queues.CME_DATA_STORE });
+		})
+
+		worker.on("error", (error) => {
+			logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
+		});
+
+		worker.postMessage(null);
 	}
 
 	return {
@@ -29,7 +45,7 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
 
 export type CmeQueueConsumerArgs = {
 	providers: {
-		worker: CmeWorker;
+		logger: Logger;
 		messageBroker: MessageBroker;
 	}
 }

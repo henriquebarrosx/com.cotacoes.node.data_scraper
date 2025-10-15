@@ -1,5 +1,5 @@
 import type { Page } from 'puppeteer';
-import type { CmeRawDTO } from './cme_raw_dto.ts';
+import type { CmeRawDTO } from '../../dto/cme_raw_dto.ts';
 import type { Logger } from "../../../infra/logger/logger.ts";
 import type { BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 

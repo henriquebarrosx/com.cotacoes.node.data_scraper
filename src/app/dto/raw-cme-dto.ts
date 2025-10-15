@@ -1,4 +1,4 @@
-export type CmeRawDTO = {
+export type RawCmeDTO = {
 	last: string;
 	change: string;
 	high: string;
