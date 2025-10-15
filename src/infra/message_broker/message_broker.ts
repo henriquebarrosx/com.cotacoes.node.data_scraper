@@ -5,6 +5,7 @@ export interface MessageBroker {
 	connect(): Promise<void>;
 	publish(params: PublishInput): Promise<void>;
 	listen(params: ConsumeInput): Promise<void>;
+	close(): Promise<void>;
 }
 
 export type PublishInput = {

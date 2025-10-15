@@ -1,3 +1,3 @@
-import { ApplicationBootstrap } from "./infra/application_bootstrap/application_bootstrap.ts";
+import { applicationBoostrap } from "./infra/application_bootstrap/index.ts";
 
-await ApplicationBootstrap.init();
+await applicationBoostrap.init();
