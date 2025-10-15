@@ -1,10 +1,12 @@
+import { threadId } from "worker_threads";
+
 export function createLogger(): Logger {
 	function info(message: string, ...args: unknown[]): void {
-		console.log(`INFO (${getFormattedDateTime()}): ${message}\n`, ...args);
+		console.log(`INFO - [Thread: ${threadId}] - (${getFormattedDateTime()}): ${message}`, ...args);
 	}
 
 	function error(message: string, ...args: unknown[]): void {
-		console.error(`ERROR (${getFormattedDateTime()}): ${message}`, ...args);
+		console.error(`ERROR - [Thread: ${threadId}] - (${getFormattedDateTime()}): ${message}`, ...args);
 	}
 
 	function getFormattedDateTime(): string {
