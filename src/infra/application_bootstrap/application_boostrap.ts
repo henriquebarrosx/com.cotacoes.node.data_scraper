@@ -14,9 +14,9 @@ export function createApplicationBootstrap({ providers }: ApplicationBootstrapAr
 			await messageBroker.connect();
 
 			logger.info("[ApplicationBootstrap] — registering message broker consumers");
-			cmeQueueConsumer.register();
-			theNewsQueueConsumer.register();
-			ptaxQueueConsumer.register();
+			await cmeQueueConsumer.register();
+			await theNewsQueueConsumer.register();
+			await ptaxQueueConsumer.register();
 		}
 
 		catch {
