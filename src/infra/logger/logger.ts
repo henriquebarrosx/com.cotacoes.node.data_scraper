@@ -1,26 +1,13 @@
-export class Logger {
-	info(message: string, ...args: unknown[]): void {
-		console.log(`INFO (${this.getFormattedDateTime()}): ${message}`, ...args);
+export function createLogger(): Logger {
+	function info(message: string, ...args: unknown[]): void {
+		console.log(`INFO (${getFormattedDateTime()}): ${message}`, ...args);
 	}
 
-	json(args: Record<string, unknown> = {}): void {
-		console.log(
-			{
-				...args,
-				timestamp: this.getFormattedDateTime(),
-			}
-		);
+	function error(message: string, ...args: unknown[]): void {
+		console.error(`ERROR (${getFormattedDateTime()}): ${message}`, ...args);
 	}
 
-	error(message: string, ...args: unknown[]): void {
-		console.error(`ERROR (${this.getFormattedDateTime()}): ${message}`, ...args);
-	}
-
-	private getFormattedDateTime(): string {
-		function addZeroAtBeginWhenLessThan10(number: number) {
-			return number.toString().padStart(2, '0');
-		}
-
+	function getFormattedDateTime(): string {
 		const date = new Date();
 
 		const day = addZeroAtBeginWhenLessThan10(date.getDate());
@@ -33,4 +20,19 @@ export class Logger {
 
 		return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 	}
+
+	function addZeroAtBeginWhenLessThan10(number: number): string {
+		return number.toString().padStart(2, '0');
+	}
+
+	return {
+		info,
+		error,
+	}
+
+}
+
+export type Logger = {
+	info(message: string, ...args: unknown[]): void;
+	error(message: string, ...args: unknown[]): void;
 }

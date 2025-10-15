@@ -58,8 +58,10 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 
 		const correlationId = crypto.randomUUID();
 
-		logger.info('[RabbitMQFacade] Publishing new message');
-		logger.json({ id: correlationId, queue: queue });
+		logger.info(
+			'[RabbitMQFacade] Publishing new message',
+			{ id: correlationId, queue: queue }
+		);
 
 		const hasBeenSent = channel.sendToQueue(
 			queue,
@@ -106,10 +108,10 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 	async function handleIncomingMessage(args: ConsumerOnMessageHandler): Promise<void> {
 		const { channel, queue, message, handler } = args;
 
-		logger.info('[RabbitMQFacade] Receiving new message');
 		const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
 
-		logger.json(
+		logger.info(
+			'[RabbitMQFacade] Receiving new message',
 			{
 				id: message.properties.correlationId,
 				queue: queue,
