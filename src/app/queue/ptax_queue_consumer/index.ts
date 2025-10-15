@@ -1,5 +1,12 @@
-import { ptaxWorker } from "../../worker/ptax/index.ts";
+import { logger } from "../../../infra/logger/index.ts";
+import { createPtaxQueueConsumer } from "./ptax_queue_consumer.ts";
 import { messageBroker } from "../../../infra/message_broker/index.ts";
-import { PtaxQueueConsumer } from "./ptax_queue_consumer.ts";
 
-export const ptaxQueueConsumer = new PtaxQueueConsumer(ptaxWorker, messageBroker);
+export const ptaxQueueConsumer = createPtaxQueueConsumer(
+	{
+		providers: {
+			logger: logger,
+			messageBroker: messageBroker,
+		}
+	}
+);

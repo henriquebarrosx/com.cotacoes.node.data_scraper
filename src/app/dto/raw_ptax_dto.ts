@@ -1,4 +1,4 @@
-export type PtaxRawDTO = {
+export type RawPtaxDTO = {
 	time: string;
 	type: string;
 	buyRateValue: string;

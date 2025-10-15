@@ -15,7 +15,7 @@ const cmeWorker = createCmeWorker(
 	}
 );
 
-const cmeData = await cmeWorker.execute();
+const result = await cmeWorker.execute();
 
 logger.info("[CmeWorker] Execution completed successfully.");
-parentPort?.postMessage(cmeData);
+parentPort?.postMessage(result);

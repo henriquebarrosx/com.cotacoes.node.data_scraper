@@ -1,7 +1,7 @@
 import type { Page } from 'puppeteer';
 
 import { type AppWorker } from '../worker.ts';
-import { type RawCmeDTO } from '../../dto/raw-cme-dto.ts';
+import { type RawCmeDTO } from '../../dto/raw_cme_dto.ts';
 import { type Logger } from "../../../infra/logger/logger.ts";
 import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
 

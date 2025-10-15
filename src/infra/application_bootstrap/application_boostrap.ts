@@ -15,6 +15,15 @@ export function createApplicationBootstrap({ providers }: ApplicationBootstrapAr
 			await cmeQueueConsumer.register();
 			await theNewsQueueConsumer.register();
 			await ptaxQueueConsumer.register();
+
+			// await messageBroker.publish(
+			// 	{
+			// 		to: queues.PTAX_DATA_SCRAPER,
+			// 		message: {
+			// 			fromDate: "2025-10-10T13:00:00",
+			// 		}
+			// 	}
+			// )
 		}
 
 		catch {

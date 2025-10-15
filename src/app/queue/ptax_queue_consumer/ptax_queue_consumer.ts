@@ -1,40 +1,54 @@
+
+import { Worker } from "worker_threads";
+
 import { queues } from "../../../infra/message_broker/queues.ts";
 
-import type { PtaxWorker } from "../../worker/ptax/ptax_worker.ts";
-import type { PtaxInput } from "../../worker/ptax/ptax_worker.ts";
-import type { ConsumerOutput, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
+import { type Consumer } from "../consumer.ts";
+import { type Logger } from "../../../infra/logger/logger.ts";
+import type { ConsumerHandlerParam, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
-export class PtaxQueueConsumer {
+export function createPtaxQueueConsumer({ providers }: PtaxQueueConsumerArgs): Consumer {
+	const { logger, messageBroker } = providers;
 
-	readonly #ptaxWorker: PtaxWorker;
-	readonly #messageBroker: MessageBroker;
-
-	constructor(
-		ptaxWorker: PtaxWorker,
-		messageBroker: MessageBroker,
-	) {
-		this.#ptaxWorker = ptaxWorker;
-		this.#messageBroker = messageBroker;
-	}
-
-	async register() {
-		await this.#messageBroker.listen(
+	async function register() {
+		await messageBroker.listen(
 			{
 				queue: queues.PTAX_DATA_SCRAPER,
-				handler: (...args) => this.processIncomingMessage(...args),
+				handler: (...args) => processIncomingMessage(...args),
 				options: { prefetch: 1 }
 			}
 		);
 	}
 
-	private async processIncomingMessage({ data }: ConsumerOutput) {
-		const fromDate = this.getTargetDate(data);
-		const ptax = await this.#ptaxWorker.execute(fromDate);
-		await this.#messageBroker.publish({ message: ptax, to: queues.PTAX_DATA_STORE });
+	async function processIncomingMessage({ data }: ConsumerHandlerParam) {
+		logger.info("[PtaxQueueConsumer] Posting message to worker...");
+
+		const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
+		const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
+
+		worker.on('message', (result) => {
+			logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
+			messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
+		})
+
+		worker.on("error", (error) => {
+			logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
+		});
 	}
 
-	private getTargetDate(data: string): string {
-		const { fromDate } = JSON.parse(data) as PtaxInput;
+	function getTargetDate(data: string): string {
+		const { fromDate } = JSON.parse(data);
 		return fromDate
+	}
+
+	return {
+		register,
+	}
+}
+
+type PtaxQueueConsumerArgs = {
+	providers: {
+		logger: Logger;
+		messageBroker: MessageBroker;
 	}
 }

@@ -34,8 +34,6 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
 		worker.on("error", (error) => {
 			logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
 		});
-
-		worker.postMessage(null);
 	}
 
 	return {
@@ -43,7 +41,7 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
 	}
 }
 
-export type CmeQueueConsumerArgs = {
+type CmeQueueConsumerArgs = {
 	providers: {
 		logger: Logger;
 		messageBroker: MessageBroker;
