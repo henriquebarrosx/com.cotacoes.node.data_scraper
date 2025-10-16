@@ -26,13 +26,15 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
 		const workerURL = new URL("../../worker/cme/runner.ts", import.meta.url)
 		const worker = new Worker(workerURL);
 
-		worker.on('message', (result) => {
+		worker.on('message', async (result) => {
 			logger.info("[CmeQueueConsumer] Worker finished processing message successfully.");
-			messageBroker.publish({ message: result, to: queues.CME_DATA_STORE });
+			await messageBroker.publish({ message: result, to: queues.CME_DATA_STORE });
+			await worker.terminate();
 		})
 
-		worker.on("error", (error) => {
+		worker.on("error", async (error) => {
 			logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
+			await worker.terminate();
 		});
 	}
 

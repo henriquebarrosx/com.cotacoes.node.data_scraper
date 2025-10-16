@@ -25,13 +25,15 @@ export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerAr
 		const workerURL = new URL("../../worker/the_news/runner.ts", import.meta.url)
 		const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-		worker.on('message', (result) => {
+		worker.on('message', async (result) => {
 			logger.info("[TheNewsQueueConsumer] Worker finished processing message successfully.");
-			messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
+			await messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
+			await worker.terminate();
 		})
 
-		worker.on("error", (error) => {
+		worker.on("error", async (error) => {
 			logger.error("[TheNewsQueueConsumer] Worker failed to execute:", error);
+			await worker.terminate();
 		});
 	}
 

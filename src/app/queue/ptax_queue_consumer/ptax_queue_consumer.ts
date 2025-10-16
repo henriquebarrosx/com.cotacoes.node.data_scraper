@@ -26,13 +26,15 @@ export function createPtaxQueueConsumer({ providers }: PtaxQueueConsumerArgs): C
 		const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
 		const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-		worker.on('message', (result) => {
+		worker.on('message', async (result) => {
 			logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
-			messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
+			await messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
+			await worker.terminate();
 		})
 
-		worker.on("error", (error) => {
+		worker.on("error", async (error) => {
 			logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
+			await worker.terminate();
 		});
 	}
 
