@@ -7,156 +7,159 @@ import type { Logger } from '../logger/logger.ts';
 import { logger } from '../logger/index.ts';
 
 type WaitUntil =
-	| 'networkidle0'		/* Waits for no more than 0 network connections for at least 500 ms. */
-	| 'networkidle2'		/* Waits for no more than 2 network connections for at least 500 ms. */
-	| 'load'				/* Waits for the load event to fire. */
-	| 'domcontentloaded'	/* Waits for the DOMContentLoaded event to fire. */
+    | 'networkidle0'		/* Waits for no more than 0 network connections for at least 500 ms. */
+    | 'networkidle2'		/* Waits for no more than 2 network connections for at least 500 ms. */
+    | 'load'				/* Waits for the load event to fire. */
+    | 'domcontentloaded'	/* Waits for the DOMContentLoaded event to fire. */
 
 export class BrowserManagerFacade {
-	private static instance: BrowserManagerFacade;
+    private static instance: BrowserManagerFacade;
 
-	readonly #logger: Logger;
+    readonly #logger: Logger;
 
-	#browser: Browser | null = null;
-	#closeEventTimeout: NodeJS.Timeout | null = null;
+    #browser: Browser | null = null;
+    #closeEventTimeout: NodeJS.Timeout | null = null;
 
-	private constructor(logger: Logger) {
-		Puppeteer.use(StealthPlugin());
-		this.#logger = logger;
-	}
+    private constructor(logger: Logger) {
+        Puppeteer.use(StealthPlugin());
+        this.#logger = logger;
+    }
 
-	static getInstance() {
-		if (!BrowserManagerFacade.instance) {
-			BrowserManagerFacade.instance = new BrowserManagerFacade(logger);
-		}
+    static getInstance() {
+        if (!BrowserManagerFacade.instance) {
+            BrowserManagerFacade.instance = new BrowserManagerFacade(logger);
+        }
 
-		return BrowserManagerFacade.instance;
-	}
+        return BrowserManagerFacade.instance;
+    }
 
-	async launch() {
-		this.#logger.info("[BrowserManagerFacade] — Launching new browser");
+    async launch() {
+        this.#logger.info("[BrowserManagerFacade] — Launching new browser");
 
-		if (this.#browser) {
-			this.#logger.info("[BrowserManagerFacade] — Browser already Launched");
-			return;
-		}
+        if (this.#browser) {
+            this.#logger.info("[BrowserManagerFacade] — Browser already Launched");
+            return;
+        }
 
-		this.#browser = await Puppeteer.launch(
-			{
-				headless: true,
-				args: [
-					'--no-sandbox',
-					'--disable-setuid-sandbox',
-					'--disable-http2',
-					'--incognito',
-					'--disk-cache-size=0',
-					'--disable-cache'
-				],
-			}
-		);
+        this.#browser = await Puppeteer.launch(
+            {
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-http2',
+                    '--incognito',
+                    '--disk-cache-size=0',
+                    '--disable-cache'
+                ],
+            }
+        );
 
-		this.setupGracefulShutdown();
-		this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
-	}
+        this.setupGracefulShutdown();
+        this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
+    }
 
-	async closeBrowser() {
-		if (this.#closeEventTimeout) clearTimeout(this.#closeEventTimeout);
-		if (!this.#browser) return
+    async closeBrowser() {
+        if (this.#closeEventTimeout) clearTimeout(this.#closeEventTimeout);
+        if (!this.#browser) return
 
-		const hasActiveWorkContexts = this.#browser.browserContexts().length > 1;
-		if (hasActiveWorkContexts) return this.setupBrowserClosureScheduler();
+        const hasActiveWorkContexts = this.#browser.browserContexts().length > 1;
+        if (hasActiveWorkContexts) return this.setupBrowserClosureScheduler();
 
-		this.#logger.info("[BrowserManagerFacade] — Closing browser");
-		await this.#browser.close();
-		this.#browser = null;
-	}
+        this.#logger.info("[BrowserManagerFacade] — Closing browser");
 
-	private setupBrowserClosureScheduler(): void {
-		this.#closeEventTimeout = setTimeout(
-			async () => await this.closeBrowser(),
-			5_000
-		);
-	}
+        await this.#browser.close();
+        this.#browser.process()?.kill("SIGTERM");
 
-	private setupGracefulShutdown() {
-		/**
-		 * Interrupt:
-		 * Enviado quando o usuário aperta Ctrl +C no terminal para interromper o processo.
-		*/
-		process.once('SIGINT', async () => {
-			await this.closeBrowser();
-			process.exit(1);
-		});
+        this.#browser = null;
+    }
 
-		/**
-		 * Terminate:
-		 * Pedido “educado” para encerrar. Usado por sistemas de orquestração 
-		 * (ex.: Docker, Kubernetes) para desligar um serviço.
-		*/
-		process.once('SIGTERM', async () => {
-			await this.closeBrowser();
-			process.exit(1);
-		});
+    private setupBrowserClosureScheduler(): void {
+        this.#closeEventTimeout = setTimeout(
+            async () => await this.closeBrowser(),
+            5_000
+        );
+    }
 
-		/**
-		 * User-defined signal 2:
-		 * Sinal “livre” para uso da aplicação. O Node usa em alguns cenários, 
-		 * como reinício em depuração (node --inspect).
-		*/
-		process.once('SIGUSR2', async () => {
-			await this.closeBrowser();
-			process.kill(process.pid, 'SIGUSR2');
-			process.exit(1);
-		});
+    private setupGracefulShutdown() {
+        /**
+         * Interrupt:
+         * Enviado quando o usuário aperta Ctrl +C no terminal para interromper o processo.
+        */
+        process.once('SIGINT', async () => {
+            await this.closeBrowser();
+            process.exit(1);
+        });
 
-		/**
-		 * Hang up:
-		 * Originalmente perda de conexão de terminal. Hoje é usado para indicar 
-		 * que o processo deve recarregar configuração ou reiniciar.
-		*/
-		process.once('SIGHUP', async () => {
-			await this.closeBrowser();
-			process.exit(1);
-		});
-	}
+        /**
+         * Terminate:
+         * Pedido “educado” para encerrar. Usado por sistemas de orquestração
+         * (ex.: Docker, Kubernetes) para desligar um serviço.
+        */
+        process.once('SIGTERM', async () => {
+            await this.closeBrowser();
+            process.exit(1);
+        });
 
-	async createContext(): Promise<BrowserContext> {
-		if (this.#browser) {
-			this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
-			const ctx = await this.#browser.createBrowserContext();
-			return ctx;
-		}
+        /**
+         * User-defined signal 2:
+         * Sinal “livre” para uso da aplicação. O Node usa em alguns cenários,
+         * como reinício em depuração (node --inspect).
+        */
+        process.once('SIGUSR2', async () => {
+            await this.closeBrowser();
+            process.kill(process.pid, 'SIGUSR2');
+            process.exit(1);
+        });
 
-		await this.launch();
-		return this.createContext();
-	}
+        /**
+         * Hang up:
+         * Originalmente perda de conexão de terminal. Hoje é usado para indicar
+         * que o processo deve recarregar configuração ou reiniciar.
+        */
+        process.once('SIGHUP', async () => {
+            await this.closeBrowser();
+            process.exit(1);
+        });
+    }
 
-	async createPageInstance(context: BrowserContext): Promise<Page> {
-		this.#logger.info("[BrowserManagerFacade] — Creating new browser page instance");
+    async createContext(): Promise<BrowserContext> {
+        if (this.#browser) {
+            this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
+            const ctx = await this.#browser.createBrowserContext();
+            return ctx;
+        }
 
-		if (!this.#browser) {
-			throw new Error('Browser context creation failed: browser not launched');
-		}
+        await this.launch();
+        return this.createContext();
+    }
 
-		const page = await context.newPage();
-		await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
-		await page.setJavaScriptEnabled(true);
-		await page.setCacheEnabled(false);
+    async createPageInstance(context: BrowserContext): Promise<Page> {
+        this.#logger.info("[BrowserManagerFacade] — Creating new browser page instance");
 
-		return page;
-	}
+        if (!this.#browser) {
+            throw new Error('Browser context creation failed: browser not launched');
+        }
 
-	async navigate(pageInstance: Page, baseURL: string): Promise<void> {
-		this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
-		const waitUntil: WaitUntil = 'domcontentloaded';
+        const page = await context.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
+        await page.setJavaScriptEnabled(true);
+        await page.setCacheEnabled(false);
 
-		await pageInstance.goto(
-			baseURL,
-			{
-				waitUntil: waitUntil,
-				timeout: 60000,
-			}
-		);
-	}
+        return page;
+    }
+
+    async navigate(pageInstance: Page, baseURL: string): Promise<void> {
+        this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
+        const waitUntil: WaitUntil = 'domcontentloaded';
+
+        await pageInstance.goto(
+            baseURL,
+            {
+                waitUntil: waitUntil,
+                timeout: 60000,
+            }
+        );
+    }
 
 }

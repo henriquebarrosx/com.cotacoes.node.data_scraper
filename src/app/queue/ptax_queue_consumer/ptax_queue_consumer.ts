@@ -8,49 +8,53 @@ import { type Logger } from "../../../infra/logger/logger.ts";
 import type { ConsumerHandlerParam, MessageBroker } from "../../../infra/message_broker/message_broker.ts";
 
 export function createPtaxQueueConsumer({ providers }: PtaxQueueConsumerArgs): Consumer {
-	const { logger, messageBroker } = providers;
+    const { logger, messageBroker } = providers;
 
-	async function register() {
-		await messageBroker.listen(
-			{
-				queue: queues.PTAX_DATA_SCRAPER,
-				handler: (...args) => processIncomingMessage(...args),
-				options: { prefetch: 1 }
-			}
-		);
-	}
+    async function register() {
+        await messageBroker.listen(
+            {
+                queue: queues.PTAX_DATA_SCRAPER,
+                handler: (...args) => processIncomingMessage(...args),
+                options: { prefetch: 1 }
+            }
+        );
+    }
 
-	async function processIncomingMessage({ data }: ConsumerHandlerParam) {
-		logger.info("[PtaxQueueConsumer] Posting message to worker...");
+    async function processIncomingMessage({ data }: ConsumerHandlerParam) {
+        logger.info("[PtaxQueueConsumer] Posting message to worker...");
 
-		const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
-		const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
+        const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
+        const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-		worker.on('message', async (result) => {
-			logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
-			await messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
-			await worker.terminate();
-		})
+        worker.on('message', async (result) => {
+            logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
+            await messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
+            worker.unref();
+        })
 
-		worker.on("error", async (error) => {
-			logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
-			await worker.terminate();
-		});
-	}
+        worker.on("error", async (error) => {
+            logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
+            worker.unref();
+        });
 
-	function getTargetDate(data: string): string {
-		const { fromDate } = JSON.parse(data);
-		return fromDate
-	}
+        worker.on("exit", (code) => {
+            logger.info(`[PtaxQueueConsumer] Worker exited with code ${code}`);
+        });
+    }
 
-	return {
-		register,
-	}
+    function getTargetDate(data: string): string {
+        const { fromDate } = JSON.parse(data);
+        return fromDate
+    }
+
+    return {
+        register,
+    }
 }
 
 type PtaxQueueConsumerArgs = {
-	providers: {
-		logger: Logger;
-		messageBroker: MessageBroker;
-	}
+    providers: {
+        logger: Logger;
+        messageBroker: MessageBroker;
+    }
 }
