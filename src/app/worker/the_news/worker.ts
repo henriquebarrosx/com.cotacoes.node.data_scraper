@@ -2,7 +2,7 @@ import { TheNewsUrl } from '../../domain/the_news_url.ts';
 
 import { type AppWorker } from '../worker.ts';
 import { type Logger } from "../../../infra/logger/logger.ts";
-import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
+import { type BrowserManager } from '../../../infra/browser_manager/browser_manager.ts';
 
 export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker<string> {
 	const { logger, browserManager } = providers;
@@ -84,6 +84,6 @@ export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker
 type TheNewsWorkerArgs = {
 	providers: {
 		logger: Logger;
-		browserManager: BrowserManagerFacade;
+		browserManager: BrowserManager;
 	}
 }

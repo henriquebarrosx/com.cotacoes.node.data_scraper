@@ -3,7 +3,7 @@ import { PtaxUrl } from '../../domain/ptax_url.ts';
 import { type AppWorker } from '../worker.ts';
 import { type RawPtaxDTO } from '../../dto/raw_ptax_dto.ts';
 import { type Logger } from "../../../infra/logger/logger.ts";
-import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
+import { type BrowserManager } from '../../../infra/browser_manager/browser_manager.ts';
 
 export function createPtaxWorker({ providers }: PtaxWorkerArgs): AppWorker<(RawPtaxDTO & { date: string })[]> {
 	const { logger, browserManager } = providers;
@@ -69,6 +69,6 @@ export function createPtaxWorker({ providers }: PtaxWorkerArgs): AppWorker<(RawP
 type PtaxWorkerArgs = {
 	providers: {
 		logger: Logger;
-		browserManager: BrowserManagerFacade;
+		browserManager: BrowserManager;
 	}
 }

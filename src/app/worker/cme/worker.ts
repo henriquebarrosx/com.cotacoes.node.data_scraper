@@ -1,7 +1,7 @@
 import { type AppWorker } from '../worker.ts';
 import { type RawCmeDTO } from '../../dto/raw_cme_dto.ts';
 import { type Logger } from "../../../infra/logger/logger.ts";
-import { type BrowserManagerFacade } from '../../../infra/browser_manager/browser_manager.ts';
+import { type BrowserManager } from '../../../infra/browser_manager/browser_manager.ts';
 
 export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeDTO> {
 	const { logger, browserManager } = providers;
@@ -67,6 +67,6 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 type CmeWorkerArgs = {
 	providers: {
 		logger: Logger;
-		browserManager: BrowserManagerFacade;
+		browserManager: BrowserManager;
 	}
 }

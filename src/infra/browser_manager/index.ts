@@ -1,4 +1,10 @@
 import { logger } from "../logger/index.ts";
-import { BrowserManagerFacade } from "./browser_manager.ts";
+import { createSeleniumFacade } from "./selenium_facade/selenium_facade.ts";
 
-export const browserManager = new BrowserManagerFacade(logger);
+export const browserManager = createSeleniumFacade(
+    {
+        providers: {
+            logger: logger
+        }
+    }
+)
