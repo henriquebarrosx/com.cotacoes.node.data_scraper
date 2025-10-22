@@ -63,7 +63,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
         return `--user-data-dir=${userDataDir}`
     }
 
-    async function closeBrowser(): Promise<void> {
+    async function close(): Promise<void> {
         if (!webDriver) return
 
         logger.info("[SeleniumFacade] — Closing Web driver");
@@ -79,7 +79,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
          * Enviado quando o usuário aperta Ctrl +C no terminal para interromper o processo.
         */
         process.once('SIGINT', async () => {
-            await closeBrowser();
+            await close();
             process.exit(1);
         });
 
@@ -89,7 +89,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
          * (ex.: Docker, Kubernetes) para desligar um serviço.
         */
         process.once('SIGTERM', async () => {
-            await closeBrowser();
+            await close();
             process.exit(1);
         });
 
@@ -99,7 +99,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
          * como reinício em depuração (node --inspect).
         */
         process.once('SIGUSR2', async () => {
-            await closeBrowser();
+            await close();
             process.kill(process.pid, 'SIGUSR2');
             process.exit(1);
         });
@@ -110,7 +110,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
          * que o processo deve recarregar configuração ou reiniciar.
         */
         process.once('SIGHUP', async () => {
-            await closeBrowser();
+            await close();
             process.exit(1);
         });
     }
@@ -127,7 +127,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
 
     return {
         launch,
-        closeBrowser,
+        close,
         navigate,
         evaluate,
     }
