@@ -38,19 +38,22 @@ docker run -d `
   --name rabbitmq `
   --restart always `
   --network jim-network `
+  --memory=500m `
   -p 5672:5672 `
   -p 15672:15672 `
-  --env RABBITMQ_DEFAULT_USER=admin `
-  --env RABBITMQ_DEFAULT_PASS=guest `
-  --volume rabbitmq_data:/var/lib/rabbitmq `
-  --volume ${PWD}/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf `
+  -e RABBITMQ_DEFAULT_USER=admin `
+  -e RABBITMQ_DEFAULT_PASS=guest `
+  -v rabbitmq_data:/var/lib/rabbitmq `
+  -v "${PWD}\rabbitmq\rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf" `
   rabbitmq:3-management
+
 
 # Or at Linux system
 docker run -d \
   --name rabbitmq \
   --restart always \
   --network jim-network \
+  --memory=500m \
   -p 5672:5672 \
   -p 15672:15672 \
   -e RABBITMQ_DEFAULT_USER=admin \
