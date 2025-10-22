@@ -19,10 +19,10 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     let webDriver: WebDriver | null = null;
 
     async function launch(): Promise<void> {
-        logger.info("[BrowserManagerFacade] — Launching new browser");
+        logger.info("[SeleniumFacade] — Launching new web driver instance");
 
         if (webDriver) {
-            logger.info("[BrowserManagerFacade] — Browser already Launched");
+            logger.info("[SeleniumFacade] — Web driver already Launched");
             return;
         }
 
@@ -55,7 +55,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
             .setTimeouts({ pageLoad: 60_000 });
 
         setupGracefulShutdown();
-        logger.info("[BrowserManagerFacade] — Browser launched successfully");
+        logger.info("[SeleniumFacade] — Web driver launched successfully");
     }
 
     function createNewSessionArg(): string {
@@ -66,7 +66,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     async function closeBrowser(): Promise<void> {
         if (!webDriver) return
 
-        logger.info("[BrowserManagerFacade] — Closing browser");
+        logger.info("[SeleniumFacade] — Closing Web driver");
 
         await webDriver.close();
         await webDriver.quit();
@@ -116,7 +116,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     }
 
     async function navigate(baseURL: string): Promise<void> {
-        logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
+        logger.info(`[SeleniumFacade] — Navigating to page '${baseURL}'`);
         if (webDriver) await webDriver.get(baseURL);
     }
 
