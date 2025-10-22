@@ -24,7 +24,7 @@ export class BrowserManagerFacade {
 
         const options = new chrome.Options()
             .addArguments(
-                '--headless=new',
+                '--headless',
                 '--disable-http2',
                 '--no-sandbox',
                 '--incognito',
