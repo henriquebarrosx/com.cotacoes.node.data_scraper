@@ -22,22 +22,22 @@ export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerAr
     async function processIncomingMessage({ data }: ConsumerHandlerParam) {
         logger.info("[TheNewsQueueConsumer] Posting message to worker...");
 
-        const workerURL = new URL("../../worker/the_news/runner.ts", import.meta.url)
-        const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
+        await new Promise<void>((resolve, reject) => {
+            const workerURL = new URL("../../worker/the_news/runner.ts", import.meta.url)
+            const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-        worker.on('message', async (result) => {
-            logger.info("[TheNewsQueueConsumer] Worker finished processing message successfully.");
-            await messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
-            worker.unref();
-        })
+            worker.on('message', async (result) => {
+                logger.info("[TheNewsQueueConsumer] Worker finished processing message successfully.");
+                await messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
+                await worker.terminate();
+                resolve();
+            })
 
-        worker.on("error", async (error) => {
-            logger.error("[TheNewsQueueConsumer] Worker failed to execute:", error);
-            worker.unref();
-        });
-
-        worker.on("exit", (code) => {
-            logger.info(`[TheNewsQueueConsumer] Worker exited with code ${code}`);
+            worker.on("error", async (error) => {
+                logger.error("[TheNewsQueueConsumer] Worker failed to execute:", error);
+                await worker.terminate();
+                reject(error);
+            });
         });
     }
 

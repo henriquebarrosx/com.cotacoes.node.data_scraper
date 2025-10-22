@@ -23,22 +23,22 @@ export function createPtaxQueueConsumer({ providers }: PtaxQueueConsumerArgs): C
     async function processIncomingMessage({ data }: ConsumerHandlerParam) {
         logger.info("[PtaxQueueConsumer] Posting message to worker...");
 
-        const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
-        const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
+        await new Promise<void>((resolve, reject) => {
+            const workerURL = new URL("../../worker/ptax/runner.ts", import.meta.url)
+            const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-        worker.on('message', async (result) => {
-            logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
-            await messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
-            worker.unref();
-        })
+            worker.on('message', async (result) => {
+                logger.info("[PtaxQueueConsumer] Worker finished processing message successfully.");
+                await messageBroker.publish({ message: result, to: queues.PTAX_DATA_STORE });
+                await worker.terminate();
+                resolve();
+            })
 
-        worker.on("error", async (error) => {
-            logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
-            worker.unref();
-        });
-
-        worker.on("exit", (code) => {
-            logger.info(`[PtaxQueueConsumer] Worker exited with code ${code}`);
+            worker.on("error", async (error) => {
+                logger.error("[PtaxQueueConsumer] Worker failed to execute:", error);
+                await worker.terminate();
+                reject(error);
+            });
         });
     }
 

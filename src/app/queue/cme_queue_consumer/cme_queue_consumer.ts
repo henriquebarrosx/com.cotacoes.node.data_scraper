@@ -23,18 +23,22 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
     async function processIncomingMessage() {
         logger.info("[CmeQueueConsumer] Posting message to worker...");
 
-        const workerURL = new URL("../../worker/cme/runner.ts", import.meta.url)
-        const worker = new Worker(workerURL);
+        await new Promise<void>((resolve, reject) => {
+            const workerURL = new URL("../../worker/cme/runner.ts", import.meta.url)
+            const worker = new Worker(workerURL);
 
-        worker.on('message', async (result) => {
-            logger.info("[CmeQueueConsumer] Worker finished processing message successfully.");
-            await messageBroker.publish({ message: result, to: queues.CME_DATA_STORE });
-            await worker.terminate();
-        })
+            worker.on('message', async (result) => {
+                logger.info("[CmeQueueConsumer] Worker finished processing message successfully.");
+                await messageBroker.publish({ message: result, to: queues.CME_DATA_STORE });
+                await worker.terminate();
+                resolve();
+            })
 
-        worker.on("error", async (error) => {
-            logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
-            await worker.terminate();
+            worker.on("error", async (error) => {
+                logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
+                await worker.terminate();
+                reject(error);
+            });
         });
     }
 
