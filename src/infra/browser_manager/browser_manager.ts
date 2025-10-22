@@ -8,7 +8,7 @@ export class BrowserManagerFacade {
     readonly #logger: Logger;
 
     #webDriver: WebDriver | null = null;
-    readonly #serverURL: string = "http://localhost:4444/wd/hub";
+    readonly #serverURL: string = "http://selenium:4444/wd/hub";
 
     constructor(logger: Logger) {
         this.#logger = logger;
