@@ -1,4 +1,7 @@
-import chrome from 'selenium-webdriver/chrome.js';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import Chrome from 'selenium-webdriver/chrome.js';
 import { Browser, Builder, type WebDriver } from 'selenium-webdriver';
 
 import type { Logger } from '../logger/logger.ts';
@@ -22,30 +25,41 @@ export class BrowserManagerFacade {
             return;
         }
 
-        const options = new chrome.Options()
+        const options = new Chrome.Options()
             .addArguments(
                 '--headless',
                 '--disable-http2',
                 '--no-sandbox',
                 '--incognito',
+                '--disable-gpu',
                 '--disk-cache-size=0',
                 '--disable-cache',
+                '--disable-dev-shm-usage',
+                '--disable-software-rasterizer',
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-            );
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                this.createNewSessionArg(),
+            )
+            .setBrowserVersion("stable")
 
         this.#webDriver = await new Builder()
             .forBrowser(Browser.CHROME)
-            .setChromeOptions(options as unknown as chrome.Options)
+            .setChromeOptions(options as unknown as Chrome.Options)
             .usingServer(this.#serverURL)
+            .setChromeService(new Chrome.ServiceBuilder())
             .build();
 
         await this.#webDriver.manage()
-            .setTimeouts({ pageLoad: 30_000 });
+            .setTimeouts({ pageLoad: 60_000 });
 
         this.setupGracefulShutdown();
         this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
+    }
+
+    private createNewSessionArg(): string {
+        const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-profile-'));
+        return `--user-data-dir=${userDataDir}`
     }
 
     async closeBrowser() {
