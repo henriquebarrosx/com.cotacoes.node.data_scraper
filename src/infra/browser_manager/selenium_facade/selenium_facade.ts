@@ -16,7 +16,9 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     const { logger } = providers;
 
     const serverURL: string = "http://selenium:4444/wd/hub";
+
     let webDriver: WebDriver | null = null;
+    let sessionDir: string | null = null;
 
     async function launch(): Promise<void> {
         logger.info("[SeleniumFacade] — Launching new web driver instance");
@@ -25,6 +27,8 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
             logger.info("[SeleniumFacade] — Web driver already Launched");
             return;
         }
+
+        sessionDir = createSessionDir();
 
         const options = new Chrome.Options()
             .addArguments(
@@ -40,7 +44,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
                 '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                createNewSessionArg(),
+                `--user-data-dir=${sessionDir}`,
             )
             .setBrowserVersion("stable")
 
@@ -58,9 +62,13 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
         logger.info("[SeleniumFacade] — Web driver launched successfully");
     }
 
-    function createNewSessionArg(): string {
-        const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-profile-'));
-        return `--user-data-dir=${userDataDir}`
+    function createSessionDir(): string {
+        return fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-profile-'));
+    }
+
+    function removeSessionDir(): void {
+        if (!sessionDir) return;
+        fs.rmSync(sessionDir, { recursive: true, force: true });
     }
 
     async function close(): Promise<void> {
@@ -70,6 +78,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
 
         await webDriver.close();
         await webDriver.quit();
+        removeSessionDir();
         webDriver = null;
     }
 
