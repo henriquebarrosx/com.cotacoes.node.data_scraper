@@ -29,7 +29,7 @@ export function createPtaxWorker({ providers }: PtaxWorkerArgs): AppWorker<(RawP
 		}
 
 		finally {
-			await browserManager.closeBrowser();
+			await browserManager.close();
 		}
 	}
 

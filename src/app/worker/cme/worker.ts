@@ -27,7 +27,7 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 		}
 
 		finally {
-			await browserManager.closeBrowser();
+			await browserManager.close();
 		}
 	}
 

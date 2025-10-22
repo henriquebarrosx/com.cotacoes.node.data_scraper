@@ -28,7 +28,7 @@ export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker
 		}
 
 		finally {
-			await browserManager.closeBrowser();
+			await browserManager.close();
 		}
 	}
 
