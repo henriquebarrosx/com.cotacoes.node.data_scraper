@@ -1,5 +1,3 @@
-import { type Page } from 'puppeteer';
-
 import { PtaxUrl } from '../../domain/ptax_url.ts';
 
 import { type AppWorker } from '../worker.ts';
@@ -11,15 +9,14 @@ export function createPtaxWorker({ providers }: PtaxWorkerArgs): AppWorker<(RawP
 	const { logger, browserManager } = providers;
 
 	async function execute(fromDate: string): Promise<(RawPtaxDTO & { date: string })[]> {
-		logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
-
-		const browserContext = await browserManager.createContext();
-		const page = await browserManager.createPageInstance(browserContext);
-
 		try {
-			const baseURL = new PtaxUrl(fromDate);
-			await browserManager.navigate(page, baseURL.value);
-			const data = await scrapData(page);
+			logger.info(`[PtaxWorker] Scrapping ptax data at date: ${fromDate}`);
+			await browserManager.launch();
+
+			const baseURL = new PtaxUrl(fromDate).value;
+			await browserManager.navigate(baseURL);
+			const data = await scrapData();
+
 			return data.map((params) => ({ ...params, date: fromDate }));
 		}
 
@@ -32,18 +29,13 @@ export function createPtaxWorker({ providers }: PtaxWorkerArgs): AppWorker<(RawP
 		}
 
 		finally {
-			await page.close();
-			await browserContext.close();
 			await browserManager.closeBrowser();
 		}
 	}
 
 
-	async function scrapData(page: Page): Promise<RawPtaxDTO[]> {
-		await page.waitForSelector('table.tabela tbody tr');
-
-		const data = await page.evaluate(() => {
-			// @ts-ignore: it only exist at browser-side
+	async function scrapData(): Promise<RawPtaxDTO[]> {
+		const data = await browserManager.evaluate<RawPtaxDTO[]>(() => {
 			const rows = document.querySelectorAll('table.tabela tbody tr');
 			const data: RawPtaxDTO[] = [];
 

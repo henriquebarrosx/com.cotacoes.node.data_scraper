@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   app:
     build: .
@@ -7,14 +9,37 @@ services:
     environment:
       - TZ=America/Sao_Paulo
       - NODE_ENV=production
+      - SELENIUM_URL=http://selenium:4444/wd/hub
     ports:
       - "3001:3001"
+    depends_on:
+      selenium:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 300M
+    networks:
+      - jim-network
+
+  selenium:
+    image: selenium/standalone-chrome:latest
+    shm_size: 2gb
+    restart: always
+    networks:
+      - jim-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     deploy:
       resources:
         limits:
-          memory: 1.5G
-    networks:
-      - jim-network
+          cpus: "0.5"
+          memory: 1G
 
 networks:
   jim-network:

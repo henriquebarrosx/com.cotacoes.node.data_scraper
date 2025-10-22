@@ -1,84 +1,61 @@
-import Puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import chrome from 'selenium-webdriver/chrome.js';
+import { Browser, Builder, type WebDriver } from 'selenium-webdriver';
 
-import type { Browser, BrowserContext, Page } from 'puppeteer';
 import type { Logger } from '../logger/logger.ts';
 
-import { logger } from '../logger/index.ts';
-
-type WaitUntil =
-    | 'networkidle0'		/* Waits for no more than 0 network connections for at least 500 ms. */
-    | 'networkidle2'		/* Waits for no more than 2 network connections for at least 500 ms. */
-    | 'load'				/* Waits for the load event to fire. */
-    | 'domcontentloaded'	/* Waits for the DOMContentLoaded event to fire. */
 
 export class BrowserManagerFacade {
-    private static instance: BrowserManagerFacade;
-
     readonly #logger: Logger;
 
-    #browser: Browser | null = null;
-    #closeEventTimeout: NodeJS.Timeout | null = null;
+    #webDriver: WebDriver | null = null;
+    readonly #serverURL: string = "http://localhost:4444/wd/hub";
 
-    private constructor(logger: Logger) {
-        Puppeteer.use(StealthPlugin());
+    constructor(logger: Logger) {
         this.#logger = logger;
-    }
-
-    static getInstance() {
-        if (!BrowserManagerFacade.instance) {
-            BrowserManagerFacade.instance = new BrowserManagerFacade(logger);
-        }
-
-        return BrowserManagerFacade.instance;
     }
 
     async launch() {
         this.#logger.info("[BrowserManagerFacade] — Launching new browser");
 
-        if (this.#browser) {
+        if (this.#webDriver) {
             this.#logger.info("[BrowserManagerFacade] — Browser already Launched");
             return;
         }
 
-        this.#browser = await Puppeteer.launch(
-            {
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-http2',
-                    '--incognito',
-                    '--disk-cache-size=0',
-                    '--disable-cache'
-                ],
-            }
-        );
+        const options = new chrome.Options()
+            .addArguments(
+                '--headless=new',
+                '--disable-http2',
+                '--no-sandbox',
+                '--incognito',
+                '--disk-cache-size=0',
+                '--disable-cache',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            );
+
+        this.#webDriver = await new Builder()
+            .forBrowser(Browser.CHROME)
+            .setChromeOptions(options as unknown as chrome.Options)
+            .usingServer(this.#serverURL)
+            .build();
+
+        await this.#webDriver.manage()
+            .setTimeouts({ pageLoad: 30_000 });
 
         this.setupGracefulShutdown();
         this.#logger.info("[BrowserManagerFacade] — Browser launched successfully");
     }
 
     async closeBrowser() {
-        if (this.#closeEventTimeout) clearTimeout(this.#closeEventTimeout);
-        if (!this.#browser) return
-
-        const hasActiveWorkContexts = this.#browser.browserContexts().length > 1;
-        if (hasActiveWorkContexts) return this.setupBrowserClosureScheduler();
+        if (!this.#webDriver) return
 
         this.#logger.info("[BrowserManagerFacade] — Closing browser");
 
-        await this.#browser.close();
-        this.#browser.process()?.kill("SIGTERM");
-
-        this.#browser = null;
-    }
-
-    private setupBrowserClosureScheduler(): void {
-        this.#closeEventTimeout = setTimeout(
-            async () => await this.closeBrowser(),
-            5_000
-        );
+        await this.#webDriver.close();
+        await this.#webDriver.quit();
+        this.#webDriver = null;
     }
 
     private setupGracefulShutdown() {
@@ -123,43 +100,15 @@ export class BrowserManagerFacade {
         });
     }
 
-    async createContext(): Promise<BrowserContext> {
-        if (this.#browser) {
-            this.#logger.info("[BrowserManagerFacade] — Creating new browser context");
-            const ctx = await this.#browser.createBrowserContext();
-            return ctx;
-        }
-
-        await this.launch();
-        return this.createContext();
-    }
-
-    async createPageInstance(context: BrowserContext): Promise<Page> {
-        this.#logger.info("[BrowserManagerFacade] — Creating new browser page instance");
-
-        if (!this.#browser) {
-            throw new Error('Browser context creation failed: browser not launched');
-        }
-
-        const page = await context.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
-        await page.setJavaScriptEnabled(true);
-        await page.setCacheEnabled(false);
-
-        return page;
-    }
-
-    async navigate(pageInstance: Page, baseURL: string): Promise<void> {
+    async navigate(baseURL: string): Promise<WebDriver> {
         this.#logger.info(`[BrowserManagerFacade] — Navigating to page '${baseURL}'`);
-        const waitUntil: WaitUntil = 'domcontentloaded';
+        if (this.#webDriver) await this.#webDriver.get(baseURL);
+        return this.#webDriver!;
+    }
 
-        await pageInstance.goto(
-            baseURL,
-            {
-                waitUntil: waitUntil,
-                timeout: 60000,
-            }
-        );
+    async evaluate<T>(handler: () => T): Promise<T> {
+        if (!this.#webDriver) throw new Error('Cannot evaluate page: web driver not found');
+        return await this.#webDriver.executeScript(handler)
     }
 
 }

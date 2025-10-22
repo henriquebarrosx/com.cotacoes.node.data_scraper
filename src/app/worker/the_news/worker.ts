@@ -1,6 +1,3 @@
-
-import type { Page } from 'puppeteer';
-
 import { TheNewsUrl } from '../../domain/the_news_url.ts';
 
 import { type AppWorker } from '../worker.ts';
@@ -11,15 +8,14 @@ export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker
 	const { logger, browserManager } = providers;
 
 	async function execute(fromDate: string): Promise<string> {
-		logger.info(`[TheNewsWorker] Scrapping the news data at date: ${fromDate}`);
-
-		const browserContext = await browserManager.createContext();
-		const page = await browserManager.createPageInstance(browserContext);
-
 		try {
-			const baseURL = new TheNewsUrl(fromDate);
-			await browserManager.navigate(page, baseURL.value);
-			const data = await scrapData(page);
+			logger.info(`[TheNewsWorker] Scrapping the news data at date: ${fromDate}`);
+			await browserManager.launch();
+
+			const baseURL = new TheNewsUrl(fromDate).value;
+			await browserManager.navigate(baseURL);
+			const data = await scrapData(baseURL);
+
 			return data;
 		}
 
@@ -32,52 +28,49 @@ export function createTheNewsWorker({ providers }: TheNewsWorkerArgs): AppWorker
 		}
 
 		finally {
-			await page.close();
-			await browserContext.close();
 			await browserManager.closeBrowser();
 		}
 	}
 
-	async function scrapData(page: Page): Promise<string> {
-		const links = await page.evaluate(() => {
-			const container = document.querySelectorAll('div.grid div');
-
-			const paths = Array.from(container)
-				.filter((el) => {
-					const isAnchor = el.querySelector('a[data-discover="true"]');
-					return isAnchor;
-				})
-				.filter((el) => {
-					// @ts-ignore: it only exist at browser-side
-					const anchor = el.querySelector('a[data-discover="true"]').href
-					return anchor.includes(`${location.origin}/p/`)
-				})
-				.reduce<Set<string>>((items, el) => {
-					const anchor = el.querySelector('a[data-discover="true"]') as HTMLAnchorElement;
-					items.add(anchor.href);
-					return items;
-				}, new Set<string>())
-
-			return Array.from(paths);
-		});
-
+	async function scrapData(url: string): Promise<string> {
 		let content = '';
 
-		for await (const link of links) {
-			await browserManager.navigate(page, link);
+		const links = await browserManager.evaluate<string[]>(() => {
+			const container = document.querySelectorAll('div.grid div');
+			const elements = Array.from(container);
 
-			const text = await page.evaluate(() => {
-				// @ts-ignore: it only exist at browser-side
-				const elements = document.getElementById('content-blocks').children;
-				// @ts-ignore: it only exist at browser-side
-				const contentElements = Array.from(elements).filter((el) => el.tagName === 'DIV');
-				// @ts-ignore: it only exist at browser-side
-				const textContent = contentElements.map(el => el.textContent);
-				const nonEmptyContent = textContent.filter(text => text.trim() !== '');
-				return nonEmptyContent.join('\n');
+			const links = elements.reduce((acc, element) => {
+				const anchor: HTMLAnchorElement | null = element
+					.querySelector('a[data-discover="true"]');
+
+				if (!anchor) return acc;
+
+				const matchesArticleLink = anchor.href
+					.includes(`${location.origin}/p/`);
+
+				if (!matchesArticleLink) return acc;
+
+				acc.add(anchor.href);
+				return acc;
+			}, new Set<string>())
+
+			return Array.from(links);
+		});
+
+		for await (const link of links) {
+			await browserManager.navigate(link);
+
+			const text = await browserManager.evaluate<string>(() => {
+				const container = document.getElementById('content-blocks');
+				if (!container) return '';
+
+				const elements = Array.from(container.children).filter(el => el.tagName === 'DIV');
+				const textContent = elements.map(el => el.textContent?.trim() || '');
+				const nonEmpty = textContent.filter(t => t !== '');
+				return nonEmpty.join('\n');
 			});
 
-			content = text;
+			content += text;
 		}
 
 		return content;

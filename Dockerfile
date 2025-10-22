@@ -1,14 +1,10 @@
-FROM ghcr.io/puppeteer/puppeteer:24.16.0
+FROM node:22-slim
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
-USER root
-
-RUN set -eux; \
-	curl -fsSL https://nodejs.org/dist/v22.19.0/node-v22.19.0-linux-x64.tar.xz -o /tmp/node.tar.xz; \
-	tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1; \
-	rm /tmp/node.tar.xz; \
-	node -v; npm -v
+RUN apt-get update && apt-get install -y \
+    wget gnupg ca-certificates fonts-liberation \
+    libasound2 libatk-bridge2.0-0 libnss3 libx11-xcb1 libxcomposite1 \
+    libxdamage1 libxrandr2 xdg-utils libu2f-udev libvulkan1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY package*.json ./

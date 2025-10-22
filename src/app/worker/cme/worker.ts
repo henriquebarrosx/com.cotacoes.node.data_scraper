@@ -1,5 +1,3 @@
-import type { Page } from 'puppeteer';
-
 import { type AppWorker } from '../worker.ts';
 import { type RawCmeDTO } from '../../dto/raw_cme_dto.ts';
 import { type Logger } from "../../../infra/logger/logger.ts";
@@ -9,15 +7,13 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 	const { logger, browserManager } = providers;
 
 	async function execute(): Promise<RawCmeDTO> {
-		const browserContext = await browserManager.createContext();
-		const page = await browserManager.createPageInstance(browserContext);
-
 		try {
 			const baseURL = process.env["CME_BASE_URL"];
 			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
 
-			await browserManager.navigate(page, baseURL);
-			const data = await scrapData(page);
+			await browserManager.launch();
+			await browserManager.navigate(baseURL);
+			const data = await scrapData();
 
 			return data[0];
 		}
@@ -31,20 +27,12 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 		}
 
 		finally {
-			await page.close();
-			await browserContext.close();
 			await browserManager.closeBrowser();
 		}
 	}
 
-	async function scrapData(page: Page): Promise<RawCmeDTO[]> {
-		await page.waitForSelector(
-			'.main-table-wrapper table tbody tr',
-			{ timeout: 30_000 },
-		);
-
-		const data = await page.evaluate(() => {
-			// @ts-ignore: it only exist at browser-side
+	async function scrapData(): Promise<RawCmeDTO[]> {
+		const data = await browserManager.evaluate<RawCmeDTO[]>(() => {
 			const rows = document.querySelectorAll('.main-table-wrapper table tbody tr');
 			const data: RawCmeDTO[] = [];
 
@@ -66,6 +54,7 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 
 			return data.slice(0, 1);
 		});
+
 
 		return data;
 	}
