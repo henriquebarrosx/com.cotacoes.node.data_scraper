@@ -1,22 +1,13 @@
 # Running
 
-1. Export the environment variables:
-
-> Note: If you're running from Docker, you must create a .env file and paste
-> those variables, instead export them.
+1. Define the environment variables:
 
 ```bash
-# On Linux or Mac
-export RABBITMQ_URI="amqp://admin:guest@localhost"
-export CME_BASE_URL="..."
-export PTAX_BASE_URL="..."
-export THE_NEWS_BASE_URL="..."
-
-# On Windows
-$env:RABBITMQ_URI = "amqp://admin:guest@localhost"
-$env:CME_BASE_URL = "..."
-$env:PTAX_BASE_URL = "..."
-$env:THE_NEWS_BASE_URL = "..."
+# Create a .env file
+RABBITMQ_URI="amqp://admin:guest@localhost"
+CME_BASE_URL="..."
+PTAX_BASE_URL="..."
+THE_NEWS_BASE_URL="..."
 ```
 
 2. Create a shared network to establish connection with RabbitMQ at multiple
