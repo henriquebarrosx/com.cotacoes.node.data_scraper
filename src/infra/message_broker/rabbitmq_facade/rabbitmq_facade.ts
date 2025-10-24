@@ -18,17 +18,17 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 		await keepAlive(
 			async () => {
 				try {
-					logger.info('[RabbitMQFacade] Establishing new connection');
+					logger.info('[RabbitMQFacade] Establishing connection');
 
 					const uri = process.env['RABBITMQ_URI'];
-					if (!uri) throw new Error('Cannot establish message broker connection: uri not defined');
+					if (!uri) throw new Error('Cannot establish connection: uri not defined');
 
 					connection = await Amqp.connect(uri);
 					logger.info('[RabbitMQFacade] Connection established');
 				}
 
 				catch (error) {
-					logger.error("[RabbitMQFacade] Failed to establish a connection", error);
+					logger.error("[RabbitMQFacade] Failed to establish a connection: ", error);
 					await reconnect();
 				}
 			}
@@ -42,7 +42,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 	}
 
 	async function reconnect(): Promise<void> {
-		logger.info("[RabbitMQFacade] Trying establish new connection at 5s");
+		logger.info("[RabbitMQFacade] Trying establish connection at 5s");
 		await setTimeout(5_000);
 		connection = null;
 	}
@@ -54,9 +54,10 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 		await channel.assertQueue(queue, { durable: true });
 
 		const correlationId = crypto.randomUUID();
+		const payload = JSON.stringify(message);
 
 		logger.info(
-			'[RabbitMQFacade] Publishing new message',
+			'[RabbitMQFacade] Publishing message',
 			{
 				id: correlationId,
 				queue: queue,
@@ -65,7 +66,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 
 		const hasBeenSent = channel.sendToQueue(
 			queue,
-			Buffer.from(JSON.stringify(message)),
+			Buffer.from(payload),
 			{
 				persistent: true,
 				contentType: 'application/json',
@@ -79,7 +80,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 	}
 
 	async function listen({ queue, handler, options = {} }: ConsumeArgs): Promise<void> {
-		if (!connection) throw new Error(`Cannot consume message for queue ${queue}: connection not found`);
+		if (!connection) throw new Error(`Cannot register consumer for queue ${queue}: connection not found`);
 
 		const channel = await connection.createChannel();
 		await channel.assertQueue(queue, { durable: true });
@@ -102,7 +103,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 			{ noAck: false }
 		)
 
-		logger.info(`[RabbitMQFacade] New consumer registered for queue ${queue}`);
+		logger.info(`[RabbitMQFacade] Consumer registered for queue ${queue}`);
 	}
 
 	async function handleIncomingMessage(args: ConsumerOnMessageHandler): Promise<void> {
@@ -111,14 +112,12 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 		const retryCount = Number(message.properties.headers?.["x-retry"] ?? 0);
 
 		logger.info(
-			'[RabbitMQFacade] Receiving new message',
+			'[RabbitMQFacade] Receiving message',
 			{
 				id: message.properties.correlationId,
 				queue: queue,
-				args: {
-					retries: `${retryCount}/${MAX_ALLOWED_RETRIES}`,
-					failed: retryCount !== 0,
-				}
+				retries: `${retryCount}/${MAX_ALLOWED_RETRIES}`,
+				failed: retryCount !== 0,
 			}
 		);
 

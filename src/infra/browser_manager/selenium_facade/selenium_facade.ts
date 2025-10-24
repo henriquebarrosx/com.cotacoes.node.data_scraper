@@ -21,11 +21,10 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     let sessionDir: string | null = null;
 
     async function launch(): Promise<void> {
-        logger.info("[SeleniumFacade] — Launching new web driver instance");
+        logger.info("[SeleniumFacade] — Launching web driver");
 
         if (webDriver) {
-            logger.info("[SeleniumFacade] — Web driver already Launched");
-            return;
+            throw new Error('Cannot launch web driver: Web driver already launched')
         }
 
         sessionDir = createSessionDir();
@@ -72,9 +71,11 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     }
 
     async function close(): Promise<void> {
-        if (!webDriver) return
-
         logger.info("[SeleniumFacade] — Closing Web driver");
+
+        if (!webDriver) {
+            throw new Error('Cannot close connection: Web driver instance not found')
+        }
 
         await webDriver.close();
         await webDriver.quit();
@@ -125,7 +126,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
     }
 
     async function navigate(baseURL: string): Promise<void> {
-        logger.info(`[SeleniumFacade] — Navigating to page '${baseURL}'`);
+        logger.info(`[SeleniumFacade] — Navigating to page: '${baseURL}'`);
         if (webDriver) await webDriver.get(baseURL);
     }
 

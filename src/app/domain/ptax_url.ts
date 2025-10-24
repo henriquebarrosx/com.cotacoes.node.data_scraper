@@ -23,6 +23,13 @@ export class PtaxUrl {
 	}
 
 	#getDateFormat() {
+		const DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?)?$/;
+		const isValidDate = DATE_REGEX.test(this.#date);
+
+		if (!isValidDate) {
+			throw new Error('Cannot serialize date: invalid format (expect: "2025-08-19T20:42:44.651Z", or "2025-08-19T20:42:44.651Z" or "2025-08-19")')
+		}
+
 		const dateFormat = this.#date
 			.split('T')
 			.slice(0, 1)

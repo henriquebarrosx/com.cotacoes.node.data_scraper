@@ -9,7 +9,7 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 	async function execute(): Promise<RawCmeDTO> {
 		try {
 			const baseURL = process.env["CME_BASE_URL"];
-			if (!baseURL) throw new Error('Cannot proceed cme data scrap: missing cme resource url')
+			if (!baseURL) throw new Error('Cannot proceed cme data scrap: cme resource url not found')
 
 			await browserManager.launch();
 			await browserManager.navigate(baseURL);
@@ -20,7 +20,7 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 
 		catch (error) {
 			if (error instanceof Error) {
-				logger.error('[CmeWorker] Cme data scrap failed', error.message);
+				logger.error('[CmeWorker] Cme data scrap failed: ', error.message);
 			}
 
 			throw error;
