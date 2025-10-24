@@ -1,4 +1,5 @@
 import * as Amqp from 'amqplib';
+import { setTimeout } from 'node:timers/promises';
 
 import { type Logger } from '../../logger/logger.ts';
 import type { MessageBroker, PublishArgs, ConsumeArgs, RetryOptions, ConsumerOnMessageHandler } from '../message_broker.ts';
@@ -42,12 +43,8 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 
 	async function reconnect(): Promise<void> {
 		logger.info("[RabbitMQFacade] Trying establish new connection at 5s");
-		await sleep(5_000);
+		await setTimeout(5_000);
 		connection = null;
-	}
-
-	async function sleep(delay: number = 5000): Promise<void> {
-		await new Promise(res => setTimeout(res, delay));
 	}
 
 	async function publish({ to: queue, message }: PublishArgs): Promise<void> {
@@ -160,7 +157,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 	async function asyncRetry(channel: Amqp.Channel, options: RetryOptions): Promise<void> {
 		const { queue, correlationId, message, retryCount } = options;
 
-		await sleep(30_000);
+		await setTimeout(30_000);
 
 		channel.sendToQueue(
 			queue,
