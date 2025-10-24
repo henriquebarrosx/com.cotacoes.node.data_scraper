@@ -13,9 +13,12 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 
 			await browserManager.launch();
 			await browserManager.navigate(baseURL);
-			const data = await scrapData();
+			const data = await processCmeDataExtraction();
 
-			return data[0];
+			const firstRow = data[0];
+			if (!firstRow) throw new Error('Failed to extract CME data: the source is empty or does not contain valid information for extraction.')
+
+			return firstRow;
 		}
 
 		catch (error) {
@@ -31,32 +34,55 @@ export function createCmeWorker({ providers }: CmeWorkerArgs): AppWorker<RawCmeD
 		}
 	}
 
-	async function scrapData(): Promise<RawCmeDTO[]> {
-		const data = await browserManager.evaluate<RawCmeDTO[]>(() => {
+	async function processCmeDataExtraction(): Promise<RawCmeDTO[]> {
+		return await browserManager.evaluate<RawCmeDTO[]>(() => {
 			const rows = document.querySelectorAll('.main-table-wrapper table tbody tr');
-			const data: RawCmeDTO[] = [];
+			const rawDatas: RawCmeDTO[] = [];
 
-			rows.forEach((row) => {
+			for (const row of rows) {
+				const rawData = extractRawDataFromRow(row);
+				const isEmpty = isEmptyRow(rawData);
+				if (isEmpty) continue
+
+				rawDatas.push(rawData);
+			}
+
+			function isEmptyRow(result: RawCmeDTO): boolean {
+				return Object.values(result)
+					.some(value => !value || value === '-');
+			}
+
+			function extractRawDataFromRow(row: Element): RawCmeDTO {
 				const columns = row.querySelectorAll('td');
 
-				const params = {
-					last: columns[3].innerText.trim(),
-					change: columns[4].innerText.trim(),
-					high: columns[7].innerText.trim(),
-					low: columns[8].innerText.trim(),
-					volume: columns[9].innerText.trim(),
-					updated: columns[10].innerText.trim()
+				const [
+					_month,
+					_options,
+					_chart,
+					last,
+					change,
+					_priorSettle,
+					_open,
+					high,
+					low,
+					volume,
+					updated
+				] = columns;
+
+				const params: RawCmeDTO = {
+					last: last.innerText.trim(),
+					change: change.innerText.trim(),
+					high: high.innerText.trim(),
+					low: low.innerText.trim(),
+					volume: volume.innerText.trim(),
+					updated: updated.innerText.trim()
 				};
 
-				const notEmpty = Object.values(params).every(value => !!value);
-				if (notEmpty) data.push(params);
-			});
+				return params;
+			}
 
-			return data.slice(0, 1);
+			return rawDatas;
 		});
-
-
-		return data;
 	}
 
 	return {
