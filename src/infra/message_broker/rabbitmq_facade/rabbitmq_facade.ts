@@ -47,11 +47,18 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 		connection = null;
 	}
 
-	async function publish({ to: queue, message }: PublishArgs): Promise<void> {
-		if (!connection) throw new Error('Cannot publish message: connection not found');
+	async function createChannel(queue: string, prefetch: number = 0): Promise<Amqp.Channel> {
+		if (!connection) throw new Error('Cannot create channel: connection not found');
 
 		const channel = await connection.createChannel();
 		await channel.assertQueue(queue, { durable: true });
+		await channel.prefetch(prefetch ?? 0);
+
+		return connection.createChannel();
+	}
+
+	async function publish({ channel, queue, message }: PublishArgs): Promise<void> {
+		if (!connection) throw new Error('Cannot publish message: connection not found');
 
 		const correlationId = crypto.randomUUID();
 		const payload = JSON.stringify(message);
@@ -64,7 +71,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 			}
 		);
 
-		const hasBeenSent = channel.sendToQueue(
+		channel.sendToQueue(
 			queue,
 			Buffer.from(payload),
 			{
@@ -73,18 +80,10 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 				correlationId: correlationId,
 			},
 		);
-
-		if (hasBeenSent) {
-			await channel.close();
-		}
 	}
 
-	async function listen({ queue, handler, options = {} }: ConsumeArgs): Promise<void> {
+	async function listen({ channel, queue, handler }: ConsumeArgs): Promise<void> {
 		if (!connection) throw new Error(`Cannot register consumer for queue ${queue}: connection not found`);
-
-		const channel = await connection.createChannel();
-		await channel.assertQueue(queue, { durable: true });
-		await channel.prefetch(options?.prefetch ?? 0);
 
 		channel.consume(
 			queue,
@@ -183,6 +182,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 
 	return {
 		connect,
+		createChannel,
 		publish,
 		listen,
 		close,

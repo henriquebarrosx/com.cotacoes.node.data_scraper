@@ -7,12 +7,12 @@ import { browserManager } from "../../../infra/browser_manager/index.ts";
 logger.info("[PtaxWorker] Starting execution...");
 
 const ptaxWorker = createPtaxWorker(
-	{
-		providers: {
-			browserManager,
-			logger,
-		}
-	}
+    {
+        providers: {
+            browserManager,
+            logger,
+        }
+    }
 );
 
 const result = await ptaxWorker.execute(workerData.date);

@@ -10,11 +10,13 @@ export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerAr
     const { logger, messageBroker } = providers;
 
     async function register() {
+        const channel = await messageBroker.createChannel(queues.PTAX_DATA_SCRAPER, 1);
+
         await messageBroker.listen(
             {
                 queue: queues.THE_NEWS_SCRAPER,
                 handler: (...args) => processIncomingMessage(...args),
-                options: { prefetch: 1 }
+                channel: channel,
             }
         );
     }
@@ -26,9 +28,14 @@ export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerAr
             const workerURL = new URL("../../worker/the_news/runner.ts", import.meta.url)
             const worker = new Worker(workerURL, { workerData: { date: getTargetDate(data) } });
 
-            worker.on('message', async (result) => {
+            worker.on('message', async (message) => {
                 logger.info("[TheNewsQueueConsumer] Worker finished processing message successfully.");
-                await messageBroker.publish({ message: result, to: queues.THE_NEWS_ARTICLE_STORE });
+
+                const queue = queues.THE_NEWS_ARTICLE_STORE;
+                const channel = await messageBroker.createChannel(queue);
+                await messageBroker.publish({ channel, message, queue });
+                await channel.close();
+
                 await worker.terminate();
                 resolve();
             })
