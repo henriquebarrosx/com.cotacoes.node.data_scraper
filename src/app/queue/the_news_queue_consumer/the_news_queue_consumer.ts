@@ -10,7 +10,7 @@ export function createTheNewsQueueConsumer({ providers }: TheNewsQueueConsumerAr
     const { logger, messageBroker } = providers;
 
     async function register() {
-        const channel = await messageBroker.createChannel(queues.PTAX_DATA_SCRAPER, 1);
+        const channel = await messageBroker.createChannel(queues.THE_NEWS_SCRAPER, 1);
 
         await messageBroker.listen(
             {
