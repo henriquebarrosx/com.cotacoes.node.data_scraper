@@ -54,7 +54,7 @@ export function createRabbitMQFacade({ providers }: RabbitMQFacadeArgs): Message
 		await channel.assertQueue(queue, { durable: true });
 		await channel.prefetch(prefetch ?? 0);
 
-		return connection.createChannel();
+		return channel;
 	}
 
 	async function publish({ channel, queue, message }: PublishArgs): Promise<void> {
