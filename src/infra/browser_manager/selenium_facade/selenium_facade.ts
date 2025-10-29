@@ -50,7 +50,7 @@ export function createSeleniumFacade({ providers }: SeleniumFacadeArgs): Browser
         webDriver = await new Builder()
             .forBrowser(Browser.CHROME)
             .setChromeOptions(options as unknown as Chrome.Options)
-            // .usingServer(serverURL)
+            .usingServer(serverURL)
             .setChromeService(new Chrome.ServiceBuilder())
             .build();
 
