@@ -37,13 +37,11 @@ export function createCmeQueueConsumer({ providers }: CmeQueueConsumerArgs): Con
                 await messageBroker.publish({ channel, message, queue });
                 await channel.close();
 
-                await worker.terminate();
                 resolve();
             })
 
             worker.on("error", async (error) => {
                 logger.error("[CmeQueueConsumer] Worker failed to execute:", error);
-                await worker.terminate();
                 reject(error);
             });
         });
